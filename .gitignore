@@ -1,0 +1,6 @@
+# Build
+config.sh
+build/
+
+# Editors
+.vscode/
