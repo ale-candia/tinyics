@@ -59,3 +59,12 @@ IndustrialNetworkBuilder::GetAllNodes()
 
     return n;
 }
+
+void
+IndustrialNetworkBuilder::EnablePcap(char* filePrefix)
+{
+    if (m_csma)
+    {
+        m_csma->EnablePcapAll(filePrefix);
+    }
+}

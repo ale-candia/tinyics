@@ -3,7 +3,12 @@
 #include <iostream>
 #include <stdint.h>
 
+#include "ns3/simulator.h"
+#include "ns3/nstime.h"
+
 struct PlcState;
+
+using namespace ns3;
 
 enum IndustrialProcessType
 {
@@ -24,7 +29,7 @@ class WaterTank : public IndustrialProcess
 public:
     void UpdateState(PlcState& plcState)
     {
-        std::clog << "Updating WaterTank state\n";
+        std::clog << "Updating state [WaterTank - " << Simulator::Now().As(Time::S) << "]\n";
     }
 };
 
@@ -33,7 +38,7 @@ class SemaphoreLights : public IndustrialProcess
 public:
     void UpdateState(PlcState& plcState)
     {
-        std::clog << "Updating Semaphore Light state\n";
+        std::clog << "Updating state [SemaphoreLights - " << Simulator::Now().As(Time::S) << "]\n";
     }
 };
 

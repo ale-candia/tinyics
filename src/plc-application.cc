@@ -29,15 +29,15 @@ PlcApplication::GetTypeId()
                           "Port on which we listen for incoming packets.",
                           UintegerValue(2222),
                           MakeUintegerAccessor(&PlcApplication::m_port),
-                          MakeUintegerChecker<uint16_t>())
-            .AddTraceSource("Rx",
-                            "A packet has been received",
-                            MakeTraceSourceAccessor(&PlcApplication::m_rxTrace),
-                            "Packet::TracedCallback")
-            .AddTraceSource("RxWithAddresses",
-                            "A packet has been received",
-                            MakeTraceSourceAccessor(&PlcApplication::m_rxTraceWithAddresses),
-                            "Packet::TwoAddressTracedCallback");
+                          MakeUintegerChecker<uint16_t>());
+            // .AddTraceSource("Rx",
+            //                 "A packet has been received",
+            //                 MakeTraceSourceAccessor(&PlcApplication::m_rxTrace),
+            //                 "Packet::TracedCallback")
+            // .AddTraceSource("RxWithAddresses",
+            //                 "A packet has been received",
+            //                 MakeTraceSourceAccessor(&PlcApplication::m_rxTraceWithAddresses),
+            //                 "Packet::TwoAddressTracedCallback");
     return tid;
 }
 
@@ -96,8 +96,8 @@ PlcApplication::HandleRead(Ptr<Socket> socket)
     while ((packet = socket->RecvFrom(from)))
     {
         socket->GetSockName(localAddress);
-        m_rxTrace(packet);
-        m_rxTraceWithAddresses(packet, from, localAddress);
+        // m_rxTrace(packet);
+        // m_rxTraceWithAddresses(packet, from, localAddress);
 
         if (InetSocketAddress::IsMatchingType(from))
         {

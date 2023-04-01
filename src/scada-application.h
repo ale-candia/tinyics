@@ -40,12 +40,12 @@ public:
      * \param ip remote IP address
      * \param port remote port
      */
-    void SetRemote(Address ip, uint16_t port);
+    void AddRemote(Address ip, uint16_t port);
     /**
      * \brief set the remote address
      * \param addr remote address
      */
-    void SetRemote(Address addr);
+    void AddRemote(Address addr);
 
     /**
      * Set the data size of the packet (the number of bytes that are sent as data
@@ -132,7 +132,6 @@ private:
      * \brief Send a packet
      */
     void Send();
-
     /**
      * \brief Handle a packet reception.
      *
@@ -141,6 +140,7 @@ private:
      * \param socket the socket the packet was received to.
      */
     void HandleRead(Ptr<Socket> socket);
+    void FreeSockets();
 
     uint32_t m_count; //!< Maximum number of packets the application will send
     Time m_interval;  //!< Packet inter-send time
@@ -150,20 +150,9 @@ private:
     uint8_t* m_data;     //!< packet payload data
 
     uint32_t m_sent;       //!< Counter for sent packets
-    Ptr<Socket> m_socket;  //!< Socket
-    Address m_peerAddress; //!< Remote peer address
+    std::vector<Ptr<Socket>> m_sockets;  //!< Socket
+    std::vector<Address> m_peerAddresses; //!< Remote peer address
     uint16_t m_peerPort;   //!< Remote peer port
-    // EventId m_sendEvent;   //!< Event to send the next packet
 
-    /// Callbacks for tracing the packet Tx events
-    TracedCallback<Ptr<const Packet>> m_txTrace;
-
-    /// Callbacks for tracing the packet Rx events
-    TracedCallback<Ptr<const Packet>> m_rxTrace;
-
-    /// Callbacks for tracing the packet Tx events, includes source and destination addresses
-    TracedCallback<Ptr<const Packet>, const Address&, const Address&> m_txTraceWithAddresses;
-
-    /// Callbacks for tracing the packet Rx events, includes source and destination addresses
-    TracedCallback<Ptr<const Packet>, const Address&, const Address&> m_rxTraceWithAddresses;
+    bool m_started; //!< Whether the app has already started
 };

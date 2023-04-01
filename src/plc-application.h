@@ -61,11 +61,5 @@ private:
     PlcState m_state;       //!< State of the PLC ports
     std::shared_ptr<IndustrialProcess> m_industrialProcess; //!< Industrial process being controlled by the PLC
 
-    /// Callbacks for tracing the packet Rx events
-    TracedCallback<Ptr<const Packet>> m_rxTrace;
-
-    /// Callbacks for tracing the packet Rx events, includes source and destination addresses
-    TracedCallback<Ptr<const Packet>, const Address&, const Address&> m_rxTraceWithAddresses;
-
     friend class IndustrialNetworkBuilder;
 };

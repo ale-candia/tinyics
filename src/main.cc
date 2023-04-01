@@ -36,8 +36,10 @@ main(int argc, char* argv[])
     networkBuilder.BuildNetwork();
 
     // Specify system connections
-    scada->SetRemote(plc1->GetAddress());
-    scada->SetRemote(plc2->GetAddress());
+    scada->AddRemote(plc1->GetAddress());
+    scada->AddRemote(plc2->GetAddress());
+
+    // networkBuilder.EnablePcap("ping-example");
 
     // Run the simulation
     Simulator::Run();

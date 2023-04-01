@@ -31,11 +31,6 @@ ScadaApplication::GetTypeId()
                           TimeValue(Seconds(1.0)),
                           MakeTimeAccessor(&ScadaApplication::m_interval),
                           MakeTimeChecker())
-            .AddAttribute("RemoteAddress",
-                          "The destination Address of the outbound packets",
-                          AddressValue(),
-                          MakeAddressAccessor(&ScadaApplication::m_peerAddress),
-                          MakeAddressChecker())
             .AddAttribute("RemotePort",
                           "The destination port of the outbound packets",
                           UintegerValue(2222),
@@ -45,38 +40,22 @@ ScadaApplication::GetTypeId()
                           "Size of echo data in outbound packets",
                           UintegerValue(100),
                           MakeUintegerAccessor(&ScadaApplication::SetDataSize, &ScadaApplication::GetDataSize),
-                          MakeUintegerChecker<uint32_t>())
-            .AddTraceSource("Tx",
-                            "A new packet is created and is sent",
-                            MakeTraceSourceAccessor(&ScadaApplication::m_txTrace),
-                            "ns3::Packet::TracedCallback")
-            .AddTraceSource("Rx",
-                            "A packet has been received",
-                            MakeTraceSourceAccessor(&ScadaApplication::m_rxTrace),
-                            "ns3::Packet::TracedCallback")
-            .AddTraceSource("TxWithAddresses",
-                            "A new packet is created and is sent",
-                            MakeTraceSourceAccessor(&ScadaApplication::m_txTraceWithAddresses),
-                            "ns3::Packet::TwoAddressTracedCallback")
-            .AddTraceSource("RxWithAddresses",
-                            "A packet has been received",
-                            MakeTraceSourceAccessor(&ScadaApplication::m_rxTraceWithAddresses),
-                            "ns3::Packet::TwoAddressTracedCallback");
+                          MakeUintegerChecker<uint32_t>());
     return tid;
 }
 
 ScadaApplication::ScadaApplication()
 {
     m_sent = 0;
-    m_socket = nullptr;
-    // m_sendEvent = EventId();
+    FreeSockets();
     m_data = nullptr;
     m_dataSize = 0;
+    m_started=false;
 }
 
 ScadaApplication::~ScadaApplication()
 {
-    m_socket = nullptr;
+    FreeSockets();
 
     delete[] m_data;
     m_data = nullptr;
@@ -84,16 +63,25 @@ ScadaApplication::~ScadaApplication()
 }
 
 void
-ScadaApplication::SetRemote(Address ip, uint16_t port)
+ScadaApplication::FreeSockets()
 {
-    m_peerAddress = ip;
+    for (auto socket : m_sockets)
+    {
+        socket = nullptr;
+    }
+}
+
+void
+ScadaApplication::AddRemote(Address ip, uint16_t port)
+{
+    m_peerAddresses.push_back(ip);
     m_peerPort = port;
 }
 
 void
-ScadaApplication::SetRemote(Address addr)
+ScadaApplication::AddRemote(Address addr)
 {
-    m_peerAddress = addr;
+    m_peerAddresses.push_back(addr);
 }
 
 void
@@ -105,49 +93,56 @@ ScadaApplication::DoDispose()
 void
 ScadaApplication::StartApplication()
 {
+    if (m_started)
+    {
+        std::cerr << "[WARNING] SCADA application was attempted to start twice\n";
+        return;
+    }
+    m_started = true;
 
-    if (!m_socket)
+    for (Address address : m_peerAddresses)
     {
         TypeId tid = TypeId::LookupByName("ns3::UdpSocketFactory");
-        m_socket = Socket::CreateSocket(GetNode(), tid);
-        if (Ipv4Address::IsMatchingType(m_peerAddress) == true)
+        Ptr<Socket> socket = Socket::CreateSocket(GetNode(), tid);
+        if (Ipv4Address::IsMatchingType(address) == true)
         {
-            if (m_socket->Bind() == -1)
+            if (socket->Bind() == -1)
             {
                 NS_FATAL_ERROR("Failed to bind socket");
             }
-            m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddress), m_peerPort));
+            socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(address), m_peerPort));
         }
-        else if (InetSocketAddress::IsMatchingType(m_peerAddress) == true)
+        else if (InetSocketAddress::IsMatchingType(address) == true)
         {
-            if (m_socket->Bind() == -1)
+            if (socket->Bind() == -1)
             {
                 NS_FATAL_ERROR("Failed to bind socket");
             }
-            m_socket->Connect(m_peerAddress);
+            socket->Connect(address);
         }
         else
         {
-            NS_FATAL_ERROR("[ScadaApplication] Incompatible address type: " << m_peerAddress);
+            NS_FATAL_ERROR("[ScadaApplication] Incompatible address type: " << address);
         }
+
+        socket->SetRecvCallback(MakeCallback(&ScadaApplication::HandleRead, this));
+        socket->SetAllowBroadcast(true);
+
+        m_sockets.push_back(socket);
     }
 
-    m_socket->SetRecvCallback(MakeCallback(&ScadaApplication::HandleRead, this));
-    m_socket->SetAllowBroadcast(true);
     ScheduleTransmit(Seconds(0.));
 }
 
 void
 ScadaApplication::StopApplication()
 {
-    if (m_socket)
+    for (auto socket : m_sockets)
     {
-        m_socket->Close();
-        m_socket->SetRecvCallback(MakeNullCallback<void, Ptr<Socket>>());
-        m_socket = nullptr;
+        socket->Close();
+        socket->SetRecvCallback(MakeNullCallback<void, Ptr<Socket>>());
+        socket = nullptr;
     }
-
-    // Simulator::Cancel(m_sendEvent);
 }
 
 void
@@ -278,38 +273,18 @@ ScadaApplication::Send()
         //
         p = Create<Packet>(m_size);
     }
-    Address localAddress;
-    m_socket->GetSockName(localAddress);
-    // call to the trace sinks before the packet is actually sent,
-    // so that tags added to the packet can be sent as well
-    m_txTrace(p);
-    if (Ipv4Address::IsMatchingType(m_peerAddress))
+    for (int i = 0; i < m_sockets.size(); i++)
     {
-        m_txTraceWithAddresses(
-            p,
-            localAddress,
-            InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddress), m_peerPort));
-    }
-    m_socket->Send(p);
-    ++m_sent;
+        Ptr<Socket> socket = m_sockets[i];
+        Address address = m_peerAddresses[i];
 
-#if 0
-    if (Ipv4Address::IsMatchingType(m_peerAddress))
-    {
-        std::clog << "At time " << Simulator::Now().As(Time::S) << " client sent " << m_size
-                               << " bytes to " << Ipv4Address::ConvertFrom(m_peerAddress)
-                               << " port " << m_peerPort << std::endl;
+        Address localAddress;
+        socket->GetSockName(localAddress);
+        socket->Send(p);
+        ++m_sent;
     }
-    else if (InetSocketAddress::IsMatchingType(m_peerAddress))
-    {
-        std::clog <<
-            "At time " << Simulator::Now().As(Time::S) << " client sent " << m_size << " bytes to "
-                       << InetSocketAddress::ConvertFrom(m_peerAddress).GetIpv4() << " port "
-                       << InetSocketAddress::ConvertFrom(m_peerAddress).GetPort() << std::endl;
-    }
-#endif
 
-    if (m_sent < m_count)
+    if (m_sent < m_count * m_sockets.size())
     {
         ScheduleTransmit(m_interval);
     }
@@ -331,13 +306,11 @@ ScadaApplication::HandleRead(Ptr<Socket> socket)
             uint32_t dataSize = packet->GetSize();
             if (dataSize > 0)
             {
-                // uint8_t dataBuffer[dataSize];
-                // packet->CopyData(dataBuffer, dataSize);
-                // std::clog << "At time " << Simulator::Now().As(Time::S) << ": " << (int)dataBuffer[0] << '\n';
+                uint8_t dataBuffer[dataSize];
+                packet->CopyData(dataBuffer, dataSize);
+                std::clog << "At time " << Simulator::Now().As(Time::S) << ": " << (int)dataBuffer[0] << '\n';
             }
         }
         socket->GetSockName(localAddress);
-        m_rxTrace(packet);
-        m_rxTraceWithAddresses(packet, from, localAddress);
     }
 }

@@ -16,6 +16,7 @@ public:
 
     void AddToNetwork(Ptr<IndustrialApplication> app);
     void BuildNetwork();
+    void EnablePcap(char* prefix);
 
 private:
     NodeContainer GetAllNodes();

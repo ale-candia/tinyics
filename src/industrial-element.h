@@ -1,28 +1,4 @@
 #pragma once
-// #include "industrial-network-builder.h"
-
-// enum IndustrialElementType {
-//     PLC,
-//     SCADA
-// };
-
-// class IndustrialElement {
-// public:
-//     IndustrialElement(IndustrialElementType type);
-
-//     IndustrialElementType GetType();
-//     void ConnectTo(IndustrialElement element);
-// private:
-//     void SetAddress(Address addr);
-//     Address GetAddress();
-
-//     IndustrialElementType m_type;
-//     Ptr<Node> m_node;
-//     Ptr<Application> m_industrialApplication;
-//     Address m_address;
-
-//     friend class IndustrialNetworkBuilder;
-// };
 
 #include "ns3/application.h"
 #include "ns3/internet-module.h"
