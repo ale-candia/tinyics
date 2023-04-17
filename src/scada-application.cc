@@ -2,13 +2,11 @@
 
 #include "ns3/inet-socket-address.h"
 #include "ns3/ipv4-address.h"
-#include "ns3/log.h"
 #include "ns3/nstime.h"
 #include "ns3/packet.h"
 #include "ns3/simulator.h"
 #include "ns3/socket-factory.h"
 #include "ns3/socket.h"
-#include "ns3/trace-source-accessor.h"
 #include "ns3/uinteger.h"
 
 using namespace ns3;
@@ -16,31 +14,31 @@ using namespace ns3;
 TypeId
 ScadaApplication::GetTypeId()
 {
-    static TypeId tid =
-        TypeId("ScadaApplication")
-            .SetParent<Application>()
-            .SetGroupName("Applications")
-            .AddConstructor<ScadaApplication>()
-            .AddAttribute("MaxPackets",
-                          "The maximum number of packets the application will send",
-                          UintegerValue(5),
-                          MakeUintegerAccessor(&ScadaApplication::m_count),
-                          MakeUintegerChecker<uint32_t>())
-            .AddAttribute("Interval",
-                          "The time to wait between packets",
-                          TimeValue(Seconds(1.0)),
-                          MakeTimeAccessor(&ScadaApplication::m_interval),
-                          MakeTimeChecker())
-            .AddAttribute("RemotePort",
-                          "The destination port of the outbound packets",
-                          UintegerValue(2222),
-                          MakeUintegerAccessor(&ScadaApplication::m_peerPort),
-                          MakeUintegerChecker<uint16_t>())
-            .AddAttribute("PacketSize",
-                          "Size of echo data in outbound packets",
-                          UintegerValue(100),
-                          MakeUintegerAccessor(&ScadaApplication::SetDataSize, &ScadaApplication::GetDataSize),
-                          MakeUintegerChecker<uint32_t>());
+    static TypeId tid = TypeId("ScadaApplication")
+                            .SetParent<Application>()
+                            .SetGroupName("Applications")
+                            .AddConstructor<ScadaApplication>()
+                            .AddAttribute("MaxPackets",
+                                          "The maximum number of packets the application will send",
+                                          UintegerValue(5),
+                                          MakeUintegerAccessor(&ScadaApplication::m_count),
+                                          MakeUintegerChecker<uint32_t>())
+                            .AddAttribute("Interval",
+                                          "The time to wait between packets",
+                                          TimeValue(Seconds(1.0)),
+                                          MakeTimeAccessor(&ScadaApplication::m_interval),
+                                          MakeTimeChecker())
+                            .AddAttribute("RemotePort",
+                                          "The destination port of the outbound packets",
+                                          UintegerValue(502),
+                                          MakeUintegerAccessor(&ScadaApplication::m_peerPort),
+                                          MakeUintegerChecker<uint16_t>())
+                            .AddAttribute("PacketSize",
+                                          "Size of echo data in outbound packets",
+                                          UintegerValue(100),
+                                          MakeUintegerAccessor(&ScadaApplication::SetDataSize,
+                                                               &ScadaApplication::GetDataSize),
+                                          MakeUintegerChecker<uint32_t>());
     return tid;
 }
 
@@ -50,7 +48,7 @@ ScadaApplication::ScadaApplication()
     FreeSockets();
     m_data = nullptr;
     m_dataSize = 0;
-    m_started=false;
+    m_started = false;
 }
 
 ScadaApplication::~ScadaApplication()
@@ -102,7 +100,7 @@ ScadaApplication::StartApplication()
 
     for (Address address : m_peerAddresses)
     {
-        TypeId tid = TypeId::LookupByName("ns3::UdpSocketFactory");
+        TypeId tid = TypeId::LookupByName("ns3::TcpSocketFactory");
         Ptr<Socket> socket = Socket::CreateSocket(GetNode(), tid);
         if (Ipv4Address::IsMatchingType(address) == true)
         {
@@ -131,7 +129,7 @@ ScadaApplication::StartApplication()
         m_sockets.push_back(socket);
     }
 
-    ScheduleTransmit(Seconds(0.));
+    //ScheduleTransmit(Seconds(0.));
 }
 
 void
@@ -308,7 +306,8 @@ ScadaApplication::HandleRead(Ptr<Socket> socket)
             {
                 uint8_t dataBuffer[dataSize];
                 packet->CopyData(dataBuffer, dataSize);
-                std::clog << "At time " << Simulator::Now().As(Time::S) << ": " << (int)dataBuffer[0] << '\n';
+                std::clog << "At time " << Simulator::Now().As(Time::S) << ": "
+                          << (int)dataBuffer[0] << '\n';
             }
         }
         socket->GetSockName(localAddress);

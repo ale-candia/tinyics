@@ -32,14 +32,14 @@ main(int argc, char* argv[])
     IndustrialNetworkBuilder networkBuilder("192.168.1.0", "255.255.255.0");
     networkBuilder.AddToNetwork(plc1);
     networkBuilder.AddToNetwork(scada);
-    networkBuilder.AddToNetwork(plc2);
+    // networkBuilder.AddToNetwork(plc2);
     networkBuilder.BuildNetwork();
 
     // Specify system connections
     scada->AddRemote(plc1->GetAddress());
     scada->AddRemote(plc2->GetAddress());
 
-    // networkBuilder.EnablePcap("ping-example");
+    networkBuilder.EnablePcap("ping-example");
 
     // Run the simulation
     Simulator::Run();

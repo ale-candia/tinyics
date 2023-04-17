@@ -61,7 +61,7 @@ IndustrialNetworkBuilder::GetAllNodes()
 }
 
 void
-IndustrialNetworkBuilder::EnablePcap(char* filePrefix)
+IndustrialNetworkBuilder::EnablePcap(std::string filePrefix)
 {
     if (m_csma)
     {

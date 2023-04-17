@@ -16,7 +16,7 @@ public:
 
     void AddToNetwork(Ptr<IndustrialApplication> app);
     void BuildNetwork();
-    void EnablePcap(char* prefix);
+    void EnablePcap(std::string prefix);
 
 private:
     NodeContainer GetAllNodes();

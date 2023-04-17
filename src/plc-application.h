@@ -1,15 +1,11 @@
 #pragma once
 
-#include "industrial-process.h"
 #include "industrial-element.h"
+#include "industrial-process.h"
 
 #include "ns3/address.h"
 #include "ns3/application.h"
-#include "ns3/event-id.h"
 #include "ns3/ptr.h"
-#include "ns3/traced-callback.h"
-
-#include <memory>
 
 namespace ns3
 {
@@ -40,26 +36,22 @@ public:
 
 protected:
     void DoDispose() override;
-    void SetAddress(Address addr);
 
 private:
     void StartApplication() override;
     void StopApplication() override;
 
-    /**
-     * \brief Handle a packet reception.
-     *
-     * This function is called by lower layers.
-     *
-     * \param socket the socket the packet was received to.
-     */
     void HandleRead(Ptr<Socket> socket);
+    void HandleAccept(Ptr<Socket> s, const Address& from);
 
+    void ScheduleUpdate(Time dt);
+    void UpdateOutput();
 
     uint16_t m_port;       //!< Port on which we listen for incoming packets.
     Ptr<Socket> m_socket;  //!< IPv4 Socket
-    PlcState m_state;       //!< State of the PLC ports
-    std::shared_ptr<IndustrialProcess> m_industrialProcess; //!< Industrial process being controlled by the PLC
+    PlcState m_in;       //!< State of the PLC input ports
+    PlcState m_out;       //!< State of the PLC out ports
+    std::unique_ptr<IndustrialProcess> m_industrialProcess; //!< Industrial process being controlled by the PLC
 
     friend class IndustrialNetworkBuilder;
 };

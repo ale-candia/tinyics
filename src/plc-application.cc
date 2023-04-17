@@ -1,51 +1,30 @@
 #include "plc-application.h"
 
-#include "ns3/address-utils.h"
 #include "ns3/inet-socket-address.h"
-#include "ns3/ipv4-address.h"
-#include "ns3/nstime.h"
 #include "ns3/packet.h"
 #include "ns3/simulator.h"
-#include "ns3/socket-factory.h"
 #include "ns3/socket.h"
-#include "ns3/udp-socket.h"
 #include "ns3/uinteger.h"
-
-#include "ns3/ipv4-address-generator.h"
-#include "ns3/ipv4.h"
-#include "ns3/ipv4-address-helper.h"
 
 using namespace ns3;
 
 TypeId
 PlcApplication::GetTypeId()
 {
-    static TypeId tid =
-        TypeId("PlcApplication")
-            .SetParent<Application>()
-            .SetGroupName("Applications")
-            .AddConstructor<PlcApplication>()
-            .AddAttribute("Port",
-                          "Port on which we listen for incoming packets.",
-                          UintegerValue(2222),
-                          MakeUintegerAccessor(&PlcApplication::m_port),
-                          MakeUintegerChecker<uint16_t>());
-            // .AddTraceSource("Rx",
-            //                 "A packet has been received",
-            //                 MakeTraceSourceAccessor(&PlcApplication::m_rxTrace),
-            //                 "Packet::TracedCallback")
-            // .AddTraceSource("RxWithAddresses",
-            //                 "A packet has been received",
-            //                 MakeTraceSourceAccessor(&PlcApplication::m_rxTraceWithAddresses),
-            //                 "Packet::TwoAddressTracedCallback");
+    static TypeId tid = TypeId("PlcApplication")
+                            .SetParent<Application>()
+                            .SetGroupName("Applications")
+                            .AddConstructor<PlcApplication>()
+                            .AddAttribute("Port",
+                                          "Port on which we listen for incoming packets.",
+                                          UintegerValue(502),
+                                          MakeUintegerAccessor(&PlcApplication::m_port),
+                                          MakeUintegerChecker<uint16_t>());
     return tid;
 }
 
 PlcApplication::PlcApplication()
 {
-    m_state = PlcState();
-    this -> SetStartTime(Seconds(1.0));
-    this -> SetStopTime(Seconds(10.0));
 }
 
 PlcApplication::~PlcApplication()
@@ -63,9 +42,11 @@ PlcApplication::DoDispose()
 void
 PlcApplication::StartApplication()
 {
+    m_stopTime = Seconds(20.0);
+
     if (!m_socket)
     {
-        TypeId tid = TypeId::LookupByName("ns3::UdpSocketFactory");
+        TypeId tid = TypeId::LookupByName("ns3::TcpSocketFactory");
         m_socket = Socket::CreateSocket(GetNode(), tid);
         InetSocketAddress local = InetSocketAddress(Ipv4Address::GetAny(), m_port);
         if (m_socket->Bind(local) == -1)
@@ -74,7 +55,11 @@ PlcApplication::StartApplication()
         }
     }
 
-    m_socket->SetRecvCallback(MakeCallback(&PlcApplication::HandleRead, this));
+    m_socket->Listen();
+    m_socket->SetAcceptCallback(MakeNullCallback<bool, Ptr<Socket>, const Address&>(),
+                                MakeCallback(&PlcApplication::HandleAccept, this));
+
+    ScheduleUpdate(Seconds(0.));
 }
 
 void
@@ -88,6 +73,12 @@ PlcApplication::StopApplication()
 }
 
 void
+PlcApplication::HandleAccept(Ptr<Socket> s, const Address& from)
+{
+    s->SetRecvCallback(MakeCallback(&PlcApplication::HandleRead, this));
+}
+
+void
 PlcApplication::HandleRead(Ptr<Socket> socket)
 {
     Ptr<Packet> packet;
@@ -96,22 +87,21 @@ PlcApplication::HandleRead(Ptr<Socket> socket)
     while ((packet = socket->RecvFrom(from)))
     {
         socket->GetSockName(localAddress);
-        // m_rxTrace(packet);
-        // m_rxTraceWithAddresses(packet, from, localAddress);
 
         if (InetSocketAddress::IsMatchingType(from))
         {
             if (m_industrialProcess)
             {
-                m_industrialProcess -> UpdateState(m_state);
-
+                // Send state to SCADA
                 // uint8_t i = 3;
 
                 // Ptr<Packet> p = Create<Packet>(&i, sizeof(i));
                 // socket->SendTo(p, 0, from);
             }
-            else {
-                NS_FATAL_ERROR("No industrial process specified for PLC: " << this -> GetInstanceTypeId().GetName());
+            else
+            {
+                NS_FATAL_ERROR("No industrial process specified for PLC: "
+                               << this->GetInstanceTypeId().GetName());
             }
         }
     }
@@ -126,4 +116,23 @@ PlcApplication::LinkProcess(IndustrialProcessType ipType)
     }
 
     m_industrialProcess = IndustrialProcessFactory::Create(ipType);
+}
+
+void
+PlcApplication::UpdateOutput()
+{
+    // Join these two together in industrial process and only make one call from here
+    m_industrialProcess->UpdateProcess(m_in, m_out);
+    m_industrialProcess->UpdateState(m_in, m_out);
+
+    if (Simulator::Now() < m_stopTime)
+    {
+        ScheduleUpdate(Seconds(1.0));
+    }
+}
+
+void
+PlcApplication::ScheduleUpdate(Time dt)
+{
+    Simulator::Schedule(dt, &PlcApplication::UpdateOutput, this);
 }
