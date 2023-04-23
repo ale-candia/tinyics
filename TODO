@@ -1,0 +1,14 @@
+- Scada should work with simulation time not amount of packets being sent.
+
+- Obligatory Naming of PLCs and HMIs.
+
+- Log Address by name when calling BuildNetwork.
+
+- Rename SCADA to HMI?
+
+- Why is there two acknowledgements in our case but our reference real life data acknowledges the packet and sends the data within that acknowledgement?
+
+- Improve reading coils, currently only the plc_in.digitalPorts are being sent.
+
+- Update rate of process should be defined by the process being simulated. Since faster changing process may need smaller update time.
+
