@@ -1,4 +1,5 @@
 #include "industrial-network-builder.h"
+#include "ns3/names.h"
 
 IndustrialNetworkBuilder::IndustrialNetworkBuilder(Ipv4Address network, Ipv4Mask mask)
 {
@@ -7,7 +8,6 @@ IndustrialNetworkBuilder::IndustrialNetworkBuilder(Ipv4Address network, Ipv4Mask
     m_csma -> SetChannelAttribute("DataRate", DataRateValue(DataRate(8000000)));     // 1Gb/s
     m_csma -> SetChannelAttribute("Delay", TimeValue(MicroSeconds(87)));
     m_csma -> SetDeviceAttribute("Mtu", UintegerValue(1500));
-    m_csma -> EnablePcapAll("iiot-scenario", false);
 
     m_ipv4Address = std::make_shared<Ipv4AddressHelper>();
     m_ipv4Address -> SetBase(network, mask);
@@ -26,6 +26,7 @@ IndustrialNetworkBuilder::AddToNetwork(Ptr<IndustrialApplication> app)
 
     Ptr<Node> node = CreateObject<Node>();
     node->AddApplication(app);
+    Names::Add(app->GetName(), node);
 
     m_applications.push_back(app);
 }
@@ -45,6 +46,8 @@ IndustrialNetworkBuilder::BuildNetwork()
     {
         auto industrialApp = m_applications[app];
         industrialApp->SetAddress(i.GetAddress(app));
+
+        std::clog << industrialApp->GetName() << ": " << industrialApp->GetAddress() << '\n';
     }
 }
 

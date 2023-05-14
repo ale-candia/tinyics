@@ -1,14 +1,42 @@
-- Scada should work with simulation time not amount of packets being sent.
+### CURRENTLY WORKING ON ###
 
-- Obligatory Naming of PLCs and HMIs.
+- Code clean up.
 
-- Log Address by name when calling BuildNetwork.
+- Packaging application and github repo.
+
+- Documentation.
+
+- SCADA still needs to parse incoming Modbus Packets and update its state witht that data
+
+- Implement the SCADA and PLC loops (this means custom logic). Here for the SCADA we should have some sort of UpdateState that will eventually
+  be defined by the user and internally we'll use a DoUpdateState which will be a wrapper that will call UpdateState and then SendAll to send
+  the Modbus read command to all RTUs. The states themselves should be modified in the HandleRead function whenever the packet arrives.
+
+### LOWER PRIORITY ###
+
+- Python bindings.
+
+- Read incomming data from the SCADA
+
+- Is m_Interval needed in the SCADA? We could receive the data the PLC and send a new request right away.
+
+- Rename scada-state to scada-readings?.
+
+- Find a way of setting a global simulation time.
 
 - Rename SCADA to HMI?
-
-- Why is there two acknowledgements in our case but our reference real life data acknowledges the packet and sends the data within that acknowledgement?
 
 - Improve reading coils, currently only the plc_in.digitalPorts are being sent.
 
 - Update rate of process should be defined by the process being simulated. Since faster changing process may need smaller update time.
+
+- What if we need to send information of a single request/response in multiple packets?
+
+- More Documentation.
+
+- (??) Join PLC_in and PLC_out into a single data structure (using Coils, Input Registers and Digital Inputs) to work better with the modbus protocol
+
+- What happens a certain amount of data in the packet is not sended, can this happen?
+
+- Timeout for read packet (can timeouts happen??)
 

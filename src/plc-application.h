@@ -1,7 +1,8 @@
 #pragma once
 
-#include "industrial-element.h"
+#include "industrial-application.h"
 #include "industrial-process.h"
+#include "modbus.h"
 
 #include "ns3/address.h"
 #include "ns3/application.h"
@@ -16,7 +17,7 @@ namespace ns3
 struct PlcState
 {
     uint8_t digitalPorts;
-    uint8_t analogPorts[2];
+    uint16_t analogPorts[2];
 };
 
 using namespace ns3;
@@ -29,7 +30,7 @@ public:
      * \return the object TypeId
      */
     static TypeId GetTypeId();
-    PlcApplication();
+    PlcApplication(const char* name);
     ~PlcApplication() override;
 
     void LinkProcess(IndustrialProcessType ip);
@@ -41,6 +42,13 @@ private:
     void StartApplication() override;
     void StopApplication() override;
 
+    /*
+     * Processes each packet received from the socket using Modbus.
+     *
+     * Note: There are a lot of verifications that are currently not
+     * being considered. And exceptions that are currently not being
+     * thrown.
+     */
     void HandleRead(Ptr<Socket> socket);
     void HandleAccept(Ptr<Socket> s, const Address& from);
 
@@ -52,6 +60,8 @@ private:
     PlcState m_in;       //!< State of the PLC input ports
     PlcState m_out;       //!< State of the PLC out ports
     std::unique_ptr<IndustrialProcess> m_industrialProcess; //!< Industrial process being controlled by the PLC
+    ModbusADU m_modbusADU;
 
     friend class IndustrialNetworkBuilder;
 };
+

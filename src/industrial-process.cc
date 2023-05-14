@@ -64,7 +64,7 @@ void
 WaterTank::UpdateProcess(PlcState& plcIn, const PlcState& plcOut)
 {
     Time current = Simulator::Now();
-    std::clog << "[WaterTank] At time " << current.As(Time::S) << ", before sensor update\n";
+    //std::clog << "[WaterTank] At time " << current.As(Time::S) << ", before sensor update\n";
 
     bool pupmOn = GetStatus(plcOut.digitalPorts, WT_PUMP);
     bool valveOn = GetStatus(plcOut.digitalPorts, WT_VALVE);
@@ -84,17 +84,17 @@ WaterTank::UpdateProcess(PlcState& plcIn, const PlcState& plcOut)
     SetStatus(plcIn, WT_LEVEL1, m_currHeight >= s_level1);
     SetStatus(plcIn, WT_LEVEL2, m_currHeight >= s_level2);
 
-    std::clog << "- Height:  " << m_currHeight << "\n";
-    std::clog << "- Pump:  " << pupmOn << "\n";
-    std::clog << "- Valve:  " << valveOn << "\n";
-    std::clog << "- Level 1:  " << GetStatus(plcIn.digitalPorts, WT_LEVEL1) << "\n";
-    std::clog << "- Level 2:  " << GetStatus(plcIn.digitalPorts, WT_LEVEL2) << "\n";
+    //std::clog << "- Height:  " << m_currHeight << "\n";
+    //std::clog << "- Pump:  " << pupmOn << "\n";
+    //std::clog << "- Valve:  " << valveOn << "\n";
+    //std::clog << "- Level 1:  " << GetStatus(plcIn.digitalPorts, WT_LEVEL1) << "\n";
+    //std::clog << "- Level 2:  " << GetStatus(plcIn.digitalPorts, WT_LEVEL2) << "\n";
 }
 
 void
 SemaphoreLights::UpdateState(const PlcState& plcIn, PlcState& plcOut)
 {
-    std::clog << "Updating state [SemaphoreLights - " << Simulator::Now().As(Time::S) << "]\n";
+    //std::clog << "Updating state [SemaphoreLights - " << Simulator::Now().As(Time::S) << "]\n";
 }
 
 void

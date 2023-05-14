@@ -1,6 +1,9 @@
 #pragma once
 
-#include "industrial-element.h"
+#include "industrial-application.h"
+#include "modbus.h"
+#include "scada-state.h"
+#include "plc-application.h"
 
 #include "ns3/application.h"
 #include "ns3/event-id.h"
@@ -17,8 +20,7 @@ namespace ns3
 using namespace ns3;
 
 /**
- * \ingroup udpecho
- * \brief A Udp Echo client
+ * \brief A ScadaApplication (acts as a Modbus TCP client)
  *
  * Every packet sent should be returned by the server and received here.
  */
@@ -31,7 +33,7 @@ public:
      */
     static TypeId GetTypeId();
 
-    ScadaApplication();
+    ScadaApplication(const char* name);
 
     ~ScadaApplication() override;
 
@@ -40,81 +42,34 @@ public:
      * \param ip remote IP address
      * \param port remote port
      */
-    void AddRemote(Address ip, uint16_t port);
+    void AddRTU(Address ip, uint16_t port);
     /**
      * \brief set the remote address
      * \param addr remote address
      */
-    void AddRemote(Address addr);
+    void AddRTU(Address addr);
 
     /**
-     * Set the data size of the packet (the number of bytes that are sent as data
-     * to the server).  The contents of the data are set to unspecified (don't
-     * care) by this call.
+     * Fill the Modbus ADU
      *
-     * \warning If you have set the fill data for the echo client using one of the
-     * SetFill calls, this will undo those effects.
-     *
-     * \param dataSize The size of the echo data you want to sent.
+     * \param unitID unit identifier of the remote machine (255 if not used)
      */
-    void SetDataSize(uint32_t dataSize);
+    void SetFill(uint8_t unitID);
 
     /**
-     * Get the number of data bytes that will be sent to the server.
+     * Select the data that is going to be read from the PLC.
      *
-     * \warning The number of bytes may be modified by calling any one of the
-     * SetFill methods.  If you have called SetFill, then the number of
-     * data bytes will correspond to the size of an initialized data buffer.
-     * If you have not called a SetFill method, the number of data bytes will
-     * correspond to the number of don't care bytes that will be sent.
-     *
-     * \returns The number of data bytes.
+     * \param plcName name of the PLC from which we're reading the data
+     * \param coils a tuple with values (startCoil, finishCoil)
+     * \param discreteIn a tuple with values (startDiscreteInput, finishDiscreteInput)
+     * \param coils a tuple with values (startInputRegister, finishInputRegister)
      */
-    uint32_t GetDataSize() const;
-
-    /**
-     * Set the data fill of the packet (what is sent as data to the server) to
-     * the zero-terminated contents of the fill string string.
-     *
-     * \warning The size of resulting echo packets will be automatically adjusted
-     * to reflect the size of the fill string -- this means that the PacketSize
-     * attribute may be changed as a result of this call.
-     *
-     * \param fill The string to use as the actual echo data bytes.
-     */
-    void SetFill(std::string fill);
-
-    /**
-     * Set the data fill of the packet (what is sent as data to the server) to
-     * the repeated contents of the fill byte.  i.e., the fill byte will be
-     * used to initialize the contents of the data packet.
-     *
-     * \warning The size of resulting echo packets will be automatically adjusted
-     * to reflect the dataSize parameter -- this means that the PacketSize
-     * attribute may be changed as a result of this call.
-     *
-     * \param fill The byte to be repeated in constructing the packet data..
-     * \param dataSize The desired size of the resulting echo packet data.
-     */
-    void SetFill(uint8_t fill, uint32_t dataSize);
-
-    /**
-     * Set the data fill of the packet (what is sent as data to the server) to
-     * the contents of the fill buffer, repeated as many times as is required.
-     *
-     * Initializing the packet to the contents of a provided single buffer is
-     * accomplished by setting the fillSize set to your desired dataSize
-     * (and providing an appropriate buffer).
-     *
-     * \warning The size of resulting echo packets will be automatically adjusted
-     * to reflect the dataSize parameter -- this means that the PacketSize
-     * attribute of the Application may be changed as a result of this call.
-     *
-     * \param fill The fill pattern to use when constructing packets.
-     * \param fillSize The number of bytes in the provided fill pattern.
-     * \param dataSize The desired size of the final echo data.
-     */
-    void SetFill(uint8_t* fill, uint32_t fillSize, uint32_t dataSize);
+    void SetReadConfigForPlc(
+        Ptr<PlcApplication> plc,
+        std::tuple<uint16_t, uint16_t> coils,
+        std::tuple<uint16_t, uint16_t> discreteIn,
+        std::tuple<uint16_t, uint16_t> inputReg
+    );
 
 protected:
     void DoDispose() override;
@@ -127,11 +82,14 @@ private:
      * \brief Schedule the next packet transmission
      * \param dt time interval between packets.
      */
-    void ScheduleTransmit(Time dt);
+    void ScheduleUpdate(Time dt);
     /**
-     * \brief Send a packet
+     * \brief Send a packet to all connected devices
      */
-    void Send();
+    void SendAll();
+
+    void DoUpdate();
+
     /**
      * \brief Handle a packet reception.
      *
@@ -142,17 +100,15 @@ private:
     void HandleRead(Ptr<Socket> socket);
     void FreeSockets();
 
-    uint32_t m_count; //!< Maximum number of packets the application will send
+    void SetFill(uint8_t unitId, MB_FunctionCode fc, std::vector<uint16_t> data);
+
     Time m_interval;  //!< Packet inter-send time
-    uint32_t m_size;  //!< Size of the sent packet
-
-    uint32_t m_dataSize; //!< packet payload size (must be equal to m_size)
-    uint8_t* m_data;     //!< packet payload data
-
-    uint32_t m_sent;       //!< Counter for sent packets
-    std::vector<Ptr<Socket>> m_sockets;  //!< Socket
+    ModbusADU m_ModBusADU;  //!< Modbus Application Data Unit
+    std::vector<Ptr<Socket>> m_sockets;   //!< Socket
     std::vector<Address> m_peerAddresses; //!< Remote peer address
-    uint16_t m_peerPort;   //!< Remote peer port
-
+    uint16_t m_peerPort;                  //!< Remote peer port
     bool m_started; //!< Whether the app has already started
+    uint16_t m_transactionId; //!< TransactionId for the Modbus ADU
+    std::map<Address, ScadaReadings> m_ReadConfigs;
 };
+

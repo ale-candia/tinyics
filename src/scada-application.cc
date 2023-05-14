@@ -1,5 +1,3 @@
-#include "scada-application.h"
-
 #include "ns3/inet-socket-address.h"
 #include "ns3/ipv4-address.h"
 #include "ns3/nstime.h"
@@ -9,6 +7,8 @@
 #include "ns3/socket.h"
 #include "ns3/uinteger.h"
 
+#include "scada-application.h"
+
 using namespace ns3;
 
 TypeId
@@ -17,12 +17,6 @@ ScadaApplication::GetTypeId()
     static TypeId tid = TypeId("ScadaApplication")
                             .SetParent<Application>()
                             .SetGroupName("Applications")
-                            .AddConstructor<ScadaApplication>()
-                            .AddAttribute("MaxPackets",
-                                          "The maximum number of packets the application will send",
-                                          UintegerValue(5),
-                                          MakeUintegerAccessor(&ScadaApplication::m_count),
-                                          MakeUintegerChecker<uint32_t>())
                             .AddAttribute("Interval",
                                           "The time to wait between packets",
                                           TimeValue(Seconds(1.0)),
@@ -32,22 +26,14 @@ ScadaApplication::GetTypeId()
                                           "The destination port of the outbound packets",
                                           UintegerValue(502),
                                           MakeUintegerAccessor(&ScadaApplication::m_peerPort),
-                                          MakeUintegerChecker<uint16_t>())
-                            .AddAttribute("PacketSize",
-                                          "Size of echo data in outbound packets",
-                                          UintegerValue(100),
-                                          MakeUintegerAccessor(&ScadaApplication::SetDataSize,
-                                                               &ScadaApplication::GetDataSize),
-                                          MakeUintegerChecker<uint32_t>());
+                                          MakeUintegerChecker<uint16_t>());
     return tid;
 }
 
-ScadaApplication::ScadaApplication()
+ScadaApplication::ScadaApplication(const char* name) : IndustrialApplication(name)
 {
-    m_sent = 0;
     FreeSockets();
-    m_data = nullptr;
-    m_dataSize = 0;
+    //m_data = nullptr;
     m_started = false;
 }
 
@@ -55,9 +41,8 @@ ScadaApplication::~ScadaApplication()
 {
     FreeSockets();
 
-    delete[] m_data;
-    m_data = nullptr;
-    m_dataSize = 0;
+    //delete[] m_data;
+    //m_data = nullptr;
 }
 
 void
@@ -70,14 +55,14 @@ ScadaApplication::FreeSockets()
 }
 
 void
-ScadaApplication::AddRemote(Address ip, uint16_t port)
+ScadaApplication::AddRTU(Address ip, uint16_t port)
 {
     m_peerAddresses.push_back(ip);
     m_peerPort = port;
 }
 
 void
-ScadaApplication::AddRemote(Address addr)
+ScadaApplication::AddRTU(Address addr)
 {
     m_peerAddresses.push_back(addr);
 }
@@ -97,6 +82,7 @@ ScadaApplication::StartApplication()
         return;
     }
     m_started = true;
+    m_stopTime = Seconds(20.0);
 
     for (Address address : m_peerAddresses)
     {
@@ -129,7 +115,7 @@ ScadaApplication::StartApplication()
         m_sockets.push_back(socket);
     }
 
-    //ScheduleTransmit(Seconds(0.));
+    ScheduleUpdate(Seconds(0.));
 }
 
 void
@@ -144,147 +130,89 @@ ScadaApplication::StopApplication()
 }
 
 void
-ScadaApplication::SetDataSize(uint32_t dataSize)
+ScadaApplication::SetFill(uint8_t unitID)
 {
-    //
-    // If the client is setting the echo packet data size this way, we infer
-    // that she doesn't care about the contents of the packet at all, so
-    // neither will we.
-    //
-    delete[] m_data;
-    m_data = nullptr;
-    m_dataSize = 0;
-    m_size = dataSize;
-}
+    m_ModBusADU.SetTransactionID(m_transactionId);
+    m_transactionId++;
 
-uint32_t
-ScadaApplication::GetDataSize() const
-{
-    return m_size;
+    m_ModBusADU.SetUnitID(unitID);
+
+    m_ModBusADU.SetFunctionCode(MB_FunctionCode::ReadCoils);
 }
 
 void
-ScadaApplication::SetFill(std::string fill)
+ScadaApplication::SetFill(uint8_t unitId, MB_FunctionCode fc, std::vector<uint16_t> data)
 {
-    uint32_t dataSize = fill.size() + 1;
+    m_ModBusADU.SetTransactionID(m_transactionId);
+    m_transactionId++;
 
-    if (dataSize != m_dataSize)
-    {
-        delete[] m_data;
-        m_data = new uint8_t[dataSize];
-        m_dataSize = dataSize;
-    }
+    m_ModBusADU.SetUnitID(unitId);
 
-    memcpy(m_data, fill.c_str(), dataSize);
+    m_ModBusADU.SetFunctionCode(fc);
 
-    //
-    // Overwrite packet size attribute.
-    //
-    m_size = dataSize;
+    m_ModBusADU.SetData<uint16_t>(data);
 }
 
-void
-ScadaApplication::SetFill(uint8_t fill, uint32_t dataSize)
-{
-    if (dataSize != m_dataSize)
-    {
-        delete[] m_data;
-        m_data = new uint8_t[dataSize];
-        m_dataSize = dataSize;
-    }
-
-    memset(m_data, fill, dataSize);
-
-    //
-    // Overwrite packet size attribute.
-    //
-    m_size = dataSize;
-}
-
-void
-ScadaApplication::SetFill(uint8_t* fill, uint32_t fillSize, uint32_t dataSize)
-{
-    if (dataSize != m_dataSize)
-    {
-        delete[] m_data;
-        m_data = new uint8_t[dataSize];
-        m_dataSize = dataSize;
-    }
-
-    if (fillSize >= dataSize)
-    {
-        memcpy(m_data, fill, dataSize);
-        m_size = dataSize;
-        return;
-    }
-
-    //
-    // Do all but the final fill.
-    //
-    uint32_t filled = 0;
-    while (filled + fillSize < dataSize)
-    {
-        memcpy(&m_data[filled], fill, fillSize);
-        filled += fillSize;
-    }
-
-    //
-    // Last fill may be partial
-    //
-    memcpy(&m_data[filled], fill, dataSize - filled);
-
-    //
-    // Overwrite packet size attribute.
-    //
-    m_size = dataSize;
-}
-
-void
-ScadaApplication::ScheduleTransmit(Time dt)
+void ScadaApplication::ScheduleUpdate(Time dt)
 {
     // m_sendEvent = Simulator::Schedule(dt, &ScadaApplication::Send, this);
-    Simulator::Schedule(dt, &ScadaApplication::Send, this);
+    //Simulator::Schedule(dt, &ScadaApplication::SendAll, this);
+    Simulator::Schedule(dt, &ScadaApplication::DoUpdate, this);
 }
 
 void
-ScadaApplication::Send()
+ScadaApplication::SendAll()
 {
-    Ptr<Packet> p;
-    if (m_dataSize)
-    {
-        //
-        // If m_dataSize is non-zero, we have a data buffer of the same size that we
-        // are expected to copy and send.  This state of affairs is created if one of
-        // the Fill functions is called.  In this case, m_size must have been set
-        // to agree with m_dataSize
-        //
-        p = Create<Packet>(m_data, m_dataSize);
-    }
-    else
-    {
-        //
-        // If m_dataSize is zero, the client has indicated that it doesn't care
-        // about the data itself either by specifying the data size by setting
-        // the corresponding attribute or by not calling a SetFill function.  In
-        // this case, we don't worry about it either.  But we do allow m_size
-        // to have a value different from the (zero) m_dataSize.
-        //
-        p = Create<Packet>(m_size);
-    }
     for (int i = 0; i < m_sockets.size(); i++)
     {
+        // Once the API is implemented
         Ptr<Socket> socket = m_sockets[i];
         Address address = m_peerAddresses[i];
 
-        Address localAddress;
-        socket->GetSockName(localAddress);
-        socket->Send(p);
-        ++m_sent;
-    }
+        // Is there a way to do this without a raw pointer?
+        ScadaReadings *readconfigs;
+        try
+        {
+            readconfigs = &m_ReadConfigs.at(address);
+        }
+        catch (std::out_of_range exception)
+        {
+            continue;
+        }
 
-    if (m_sent < m_count * m_sockets.size())
-    {
-        ScheduleTransmit(m_interval);
+        std::vector<uint16_t> data(2);
+
+        if (readconfigs->m_readings.numCoil > 0 && !readconfigs->m_pendingCoils)
+        {
+            readconfigs->m_pendingCoils = true;
+
+            data[0] = readconfigs->m_readings.startCoil;
+            data[1] = readconfigs->m_readings.numCoil;
+            SetFill(i+1, MB_FunctionCode::ReadCoils, data);
+            Ptr<Packet> p = m_ModBusADU.ToPacket();
+            socket->Send(p);
+        }
+        if (readconfigs->m_readings.numInRegs > 0 && !readconfigs->m_pendingInReg)
+        {
+            readconfigs->m_pendingInReg = true;
+
+            data[0] = readconfigs->m_readings.startInRegs;
+            data[1] = readconfigs->m_readings.numInRegs;
+            SetFill(i+1, MB_FunctionCode::ReadInputRegisters, data);
+            Ptr<Packet> p = m_ModBusADU.ToPacket()->CreateFragment(0, m_ModBusADU.GetBufferSize());
+            socket->Send(p);
+            socket->GetTxAvailable();
+        }
+        if (readconfigs->m_readings.numDiscreteIn > 0 && !readconfigs->m_pendingDiscreteIn)
+        {
+            readconfigs->m_pendingDiscreteIn = true;
+
+            data[0] = readconfigs->m_readings.startDiscreteIn;
+            data[1] = readconfigs->m_readings.numDiscreteIn;
+            SetFill(i+1, MB_FunctionCode::ReadDiscreteInputs, data);
+            Ptr<Packet> p = m_ModBusADU.ToPacket();
+            socket->Send(p);
+        }
     }
 }
 
@@ -296,20 +224,83 @@ ScadaApplication::HandleRead(Ptr<Socket> socket)
 {
     Ptr<Packet> packet;
     Address from;
-    Address localAddress;
     while ((packet = socket->RecvFrom(from)))
     {
         if (InetSocketAddress::IsMatchingType(from))
         {
-            uint32_t dataSize = packet->GetSize();
-            if (dataSize > 0)
+            // Inbound Modbus ADU
+            std::vector<ModbusADU> inboundADUs = ModbusADU::GetModbusADUs(packet);
+
+            for(const ModbusADU& adu : inboundADUs)
             {
-                uint8_t dataBuffer[dataSize];
-                packet->CopyData(dataBuffer, dataSize);
-                std::clog << "At time " << Simulator::Now().As(Time::S) << ": "
-                          << (int)dataBuffer[0] << '\n';
+
+                // Is there a way to do this without a raw pointer?
+                ScadaReadings *readconfigs;
+                try
+                {
+                    // Use the unit identifier to retrieve address, since the from
+                    // address has lost the Address format
+                    readconfigs = &m_ReadConfigs.at(m_peerAddresses[adu.GetUnitID() - 1]);
+                }
+                catch (std::out_of_range exception)
+                {
+                    continue;
+                }
+                // process packet
+                uint8_t fc = adu.GetFunctionCode();
+
+                if (fc == MB_FunctionCode::ReadCoils)
+                {
+                    readconfigs->m_pendingCoils = false;
+                }
+
+                else if (fc == MB_FunctionCode::ReadInputRegisters)
+                {
+                    readconfigs->m_pendingInReg = false;
+                }
+
+                else if (fc == MB_FunctionCode::ReadDiscreteInputs)
+                {
+                    readconfigs->m_pendingDiscreteIn = false;
+                }
             }
         }
-        socket->GetSockName(localAddress);
+    }
+
+}
+
+void
+ScadaApplication::DoUpdate()
+{
+    // Update all statuses
+
+
+    // Send Data
+    SendAll();
+
+    if (Simulator::Now() < m_stopTime)
+    {
+        ScheduleUpdate(m_interval);
     }
 }
+
+void
+ScadaApplication::SetReadConfigForPlc(
+    Ptr<PlcApplication> plc,
+    std::tuple<uint16_t, uint16_t> coils,
+    std::tuple<uint16_t, uint16_t> discreteIn,
+    std::tuple<uint16_t, uint16_t> inputReg
+){
+    ScadaReadingsConfig readConfig;
+    readConfig.startCoil = std::get<0>(coils);
+    readConfig.numCoil = std::get<1>(coils);
+
+    readConfig.startDiscreteIn = std::get<0>(discreteIn);
+    readConfig.numDiscreteIn = std::get<1>(discreteIn);
+
+    readConfig.startInRegs = std::get<0>(inputReg);
+    readConfig.numInRegs = std::get<1>(inputReg);
+
+    m_ReadConfigs.insert( std::pair<Address, ScadaReadings>(plc->GetAddress(), readConfig));
+}
+
