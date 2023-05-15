@@ -26,6 +26,8 @@ file(GLOB SourceFiles ${PROJECT_SOURCE_DIR}/src/*.cc)
 
 add_executable(${PROJECT_NAME} ${SourceFiles})
 
+add_dependencies(${PROJECT_NAME} libcore libcsma libinternet libnetwork)
+
 target_include_directories(${PROJECT_NAME}
     PRIVATE external/ns-3/build/include/
     ${PROJECT_SOURCE_DIR}/src/

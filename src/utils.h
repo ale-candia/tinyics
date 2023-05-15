@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tuple>
+#include <cstdint>
 
 /*
  * Take an uint16_t and return the higher and lower parts of the split

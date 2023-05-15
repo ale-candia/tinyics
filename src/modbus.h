@@ -1,8 +1,6 @@
 #pragma once
 
-#include <_types/_uint8_t.h>
-#include <_types/_uint16_t.h>
-#include <_types/_uint32_t.h>
+#include <cstdint>
 
 #include "ns3/ptr.h"
 #include "ns3/packet.h"
