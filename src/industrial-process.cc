@@ -1,11 +1,3 @@
-// SENSORS
-#define WT_LEVEL1 0x01
-#define WT_LEVEL2 0x02
-
-// ACTUATORS
-#define WT_PUMP 0x01
-#define WT_VALVE 0x02
-
 #include "industrial-process.h"
 
 #include "plc-application.h"
@@ -14,8 +6,6 @@
 #include "ns3/simulator.h"
 
 #include <iostream>
-
-using namespace ns3;
 
 bool
 GetStatus(uint8_t digitalPorts, uint8_t coil)
@@ -63,7 +53,7 @@ WaterTank::UpdateState(const PlcState& plcIn, PlcState& plcOut)
 void
 WaterTank::UpdateProcess(PlcState& plcIn, const PlcState& plcOut)
 {
-    Time current = Simulator::Now();
+    ns3::Time current = ns3::Simulator::Now();
     //std::clog << "[WaterTank] At time " << current.As(Time::S) << ", before sensor update\n";
 
     bool pupmOn = GetStatus(plcOut.digitalPorts, WT_PUMP);
@@ -71,11 +61,11 @@ WaterTank::UpdateProcess(PlcState& plcIn, const PlcState& plcOut)
 
     if (pupmOn)
     {
-        m_currHeight += s_pumpFlow * (current.ToDouble(Time::S) - m_prevTime.ToDouble(Time::S)) / s_tankWidth;
+        m_currHeight += s_pumpFlow * (current.ToDouble(ns3::Time::S) - m_prevTime.ToDouble(ns3::Time::S)) / s_tankWidth;
     }
     if (valveOn)
     {
-        m_currHeight -= s_valveFlow * (current.ToDouble(Time::S) - m_prevTime.ToDouble(Time::S)) / s_tankWidth;
+        m_currHeight -= s_valveFlow * (current.ToDouble(ns3::Time::S) - m_prevTime.ToDouble(ns3::Time::S)) / s_tankWidth;
     }
 
     m_prevTime = current;

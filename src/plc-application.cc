@@ -1,26 +1,24 @@
 #include "plc-application.h"
 #include "modbus.h"
+#include "utils.h"
 
 #include "ns3/inet-socket-address.h"
 #include "ns3/packet.h"
 #include "ns3/simulator.h"
 #include "ns3/socket.h"
 #include "ns3/uinteger.h"
-#include "utils.h"
 
-using namespace ns3;
-
-TypeId
+ns3::TypeId
 PlcApplication::GetTypeId()
 {
-    static TypeId tid = TypeId("PlcApplication")
+    static ns3::TypeId tid = ns3::TypeId("PlcApplication")
                             .SetParent<Application>()
                             .SetGroupName("Applications")
                             .AddAttribute("Port",
                                           "Port on which we listen for incoming packets.",
-                                          UintegerValue(502),
+                                          ns3::UintegerValue(502),
                                           MakeUintegerAccessor(&PlcApplication::m_port),
-                                          MakeUintegerChecker<uint16_t>());
+                                          ns3::MakeUintegerChecker<uint16_t>());
     return tid;
 }
 
@@ -42,13 +40,16 @@ PlcApplication::DoDispose()
 void
 PlcApplication::StartApplication()
 {
-    m_stopTime = Seconds(20.0);
+    m_stopTime = ns3::Seconds(20.0);
 
     if (!m_socket)
     {
-        TypeId tid = TypeId::LookupByName("ns3::TcpSocketFactory");
-        m_socket = Socket::CreateSocket(GetNode(), tid);
-        InetSocketAddress local = InetSocketAddress(Ipv4Address::GetAny(), m_port);
+        // Create TCP socket
+        ns3::TypeId tid = ns3::TypeId::LookupByName("ns3::TcpSocketFactory");
+        m_socket = ns3::Socket::CreateSocket(GetNode(), tid);
+
+        // Bind the socket to the local address
+        ns3::InetSocketAddress local = ns3::InetSocketAddress(ns3::Ipv4Address::GetAny(), m_port);
         if (m_socket->Bind(local) == -1)
         {
             NS_FATAL_ERROR("Failed to bind socket");
@@ -56,10 +57,13 @@ PlcApplication::StartApplication()
     }
 
     m_socket->Listen();
-    m_socket->SetAcceptCallback(MakeNullCallback<bool, Ptr<Socket>, const Address&>(),
-                                MakeCallback(&PlcApplication::HandleAccept, this));
+    m_socket->SetAcceptCallback(
+        ns3::MakeNullCallback<bool, ns3::Ptr<ns3::Socket>,
+        const ns3::Address&>(),
+        MakeCallback(&PlcApplication::HandleAccept, this)
+    );
 
-    ScheduleUpdate(Seconds(0.));
+    ScheduleUpdate(ns3::Seconds(0.));
 }
 
 void
@@ -68,27 +72,26 @@ PlcApplication::StopApplication()
     if (m_socket)
     {
         m_socket->Close();
-        m_socket->SetRecvCallback(MakeNullCallback<void, Ptr<Socket>>());
+        m_socket->SetRecvCallback(ns3::MakeNullCallback<void, ns3::Ptr<ns3::Socket>>());
     }
 }
 
 void
-PlcApplication::HandleAccept(Ptr<Socket> s, const Address& from)
+PlcApplication::HandleAccept(ns3::Ptr<ns3::Socket> s, const ns3::Address& from)
 {
     s->SetRecvCallback(MakeCallback(&PlcApplication::HandleRead, this));
 }
 
 void
-PlcApplication::HandleRead(Ptr<Socket> socket)
+PlcApplication::HandleRead(ns3::Ptr<ns3::Socket> socket)
 {
-    Ptr<Packet> packet;
-    Address from;
-    Address localAddress;
+    ns3::Ptr<ns3::Packet> packet;
+    ns3::Address from;
     while ((packet = socket->RecvFrom(from)))
     {
-        if (InetSocketAddress::IsMatchingType(from))
+        if (ns3::InetSocketAddress::IsMatchingType(from))
         {
-            // Inbound Modbus ADU
+            // Inbound Modbus ADUs
             std::vector<ModbusADU> inboundAdus = ModbusADU::GetModbusADUs(packet);
 
             for (const ModbusADU& adu : inboundAdus)
@@ -97,7 +100,6 @@ PlcApplication::HandleRead(Ptr<Socket> socket)
                 // Copy incomming ADU head (Still need to change Lenght Field accordingly)
                 ModbusADU::CopyBase(adu, m_modbusADU);
 
-                // process packet
                 uint8_t fc = m_modbusADU.GetFunctionCode();
 
                 if (fc == MB_FunctionCode::ReadCoils)
@@ -114,7 +116,7 @@ PlcApplication::HandleRead(Ptr<Socket> socket)
                         data[1] = GetBitsInRange(startAddress, numCoils, m_out.digitalPorts);
 
                         m_modbusADU.SetData(data);
-                        Ptr<Packet> p = m_modbusADU.ToPacket();
+                        ns3::Ptr<ns3::Packet> p = m_modbusADU.ToPacket();
                         socket->SendTo(p, 0, from);
                     }
 
@@ -126,7 +128,7 @@ PlcApplication::HandleRead(Ptr<Socket> socket)
                     uint16_t numInputs = CombineUint8(adu.GetDataByte(2), adu.GetDataByte(3));
 
                     // 0 <= startAddres <= 7 (max address)
-                    // 1 <= numCoils <= 8 (max amount of coils to read)
+                    // 1 <= numInputs <= 8 (max amount of digital inputs to read)
                     if (startAddress < 7 && 0 < numInputs && numInputs <= 8 - startAddress)
                     {
                         std::vector<uint8_t> data(2);
@@ -134,7 +136,7 @@ PlcApplication::HandleRead(Ptr<Socket> socket)
                         data[1] = GetBitsInRange(startAddress, numInputs, m_in.digitalPorts);
 
                         m_modbusADU.SetData(data);
-                        Ptr<Packet> p = m_modbusADU.ToPacket();
+                        ns3::Ptr<ns3::Packet> p = m_modbusADU.ToPacket();
                         socket->SendTo(p, 0, from);
                     }
                 }
@@ -143,11 +145,6 @@ PlcApplication::HandleRead(Ptr<Socket> socket)
                 {
                     uint16_t startAddress = CombineUint8(adu.GetDataByte(0), adu.GetDataByte(1));
                     uint16_t numInputs = CombineUint8(adu.GetDataByte(2), adu.GetDataByte(3));
-
-                    if (numInputs > 2)
-                    {
-                        NS_FATAL_ERROR("[UNSUPPORTED] A maximum of 2 input registers can be read");
-                    }
 
                     // 0 <= startAddres <= 7 (max address)
                     // 1 <= numCoils <= 2 (max amount of coils to read)
@@ -165,7 +162,7 @@ PlcApplication::HandleRead(Ptr<Socket> socket)
                         }
 
                         m_modbusADU.SetData(data);
-                        Ptr<Packet> p = m_modbusADU.ToPacket();
+                        ns3::Ptr<ns3::Packet> p = m_modbusADU.ToPacket();
                         socket->SendTo(p, 0, from);
                     }
                 }
@@ -200,15 +197,15 @@ PlcApplication::UpdateOutput()
     {
         NS_FATAL_ERROR("No industrial process specified for PLC: " << this->GetInstanceTypeId().GetName());
     }
-    if (Simulator::Now() < m_stopTime)
+    if (ns3::Simulator::Now() < m_stopTime)
     {
-        ScheduleUpdate(Seconds(1.0));
+        ScheduleUpdate(ns3::Seconds(1.0));
     }
 }
 
 void
-PlcApplication::ScheduleUpdate(Time dt)
+PlcApplication::ScheduleUpdate(ns3::Time dt)
 {
-    Simulator::Schedule(dt, &PlcApplication::UpdateOutput, this);
+    ns3::Simulator::Schedule(dt, &PlcApplication::UpdateOutput, this);
 }
 

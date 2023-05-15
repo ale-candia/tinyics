@@ -20,19 +20,19 @@ struct PlcState
     uint16_t analogPorts[2];
 };
 
-using namespace ns3;
-
 class PlcApplication : public IndustrialApplication
 {
 public:
     /**
-     * \brief Get the type ID.
-     * \return the object TypeId
+     * Get the type ID.
+     *
+     * returns the object TypeId
      */
-    static TypeId GetTypeId();
+    static ns3::TypeId GetTypeId();
     PlcApplication(const char* name);
     ~PlcApplication() override;
 
+    /// Link the PLC to and Industrial Process to control
     void LinkProcess(IndustrialProcessType ip);
 
 protected:
@@ -49,18 +49,29 @@ private:
      * being considered. And exceptions that are currently not being
      * thrown.
      */
-    void HandleRead(Ptr<Socket> socket);
-    void HandleAccept(Ptr<Socket> s, const Address& from);
+    void HandleRead(ns3::Ptr<ns3::Socket> socket);
 
-    void ScheduleUpdate(Time dt);
+    /// Accept callback for the socket
+    void HandleAccept(ns3::Ptr<ns3::Socket> s, const ns3::Address& from);
+
+    /**
+     * Schedule Update for the PLC and Process state
+     *
+     * The update of the PLC and the Industrial Process is independent
+     * of the network traffic. So these are simulated separately at
+     * their own rate.
+     */
+    void ScheduleUpdate(ns3::Time dt);
+
+    /// Do the state update
     void UpdateOutput();
 
     uint16_t m_port;       //!< Port on which we listen for incoming packets.
-    Ptr<Socket> m_socket;  //!< IPv4 Socket
+    ns3::Ptr<ns3::Socket> m_socket;  //!< IPv4 Socket
     PlcState m_in;       //!< State of the PLC input ports
     PlcState m_out;       //!< State of the PLC out ports
     std::unique_ptr<IndustrialProcess> m_industrialProcess; //!< Industrial process being controlled by the PLC
-    ModbusADU m_modbusADU;
+    ModbusADU m_modbusADU;  //!< The modbus ADU to be sent over the network
 
     friend class IndustrialNetworkBuilder;
 };

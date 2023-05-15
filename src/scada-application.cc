@@ -9,24 +9,22 @@
 
 #include "scada-application.h"
 
-using namespace ns3;
-
-TypeId
+ns3::TypeId
 ScadaApplication::GetTypeId()
 {
-    static TypeId tid = TypeId("ScadaApplication")
+    static ns3::TypeId tid = ns3::TypeId("ScadaApplication")
                             .SetParent<Application>()
                             .SetGroupName("Applications")
                             .AddAttribute("Interval",
                                           "The time to wait between packets",
-                                          TimeValue(Seconds(1.0)),
+                                          ns3::TimeValue(ns3::Seconds(1.0)),
                                           MakeTimeAccessor(&ScadaApplication::m_interval),
-                                          MakeTimeChecker())
+                                          ns3::MakeTimeChecker())
                             .AddAttribute("RemotePort",
                                           "The destination port of the outbound packets",
-                                          UintegerValue(502),
+                                          ns3::UintegerValue(502),
                                           MakeUintegerAccessor(&ScadaApplication::m_peerPort),
-                                          MakeUintegerChecker<uint16_t>());
+                                          ns3::MakeUintegerChecker<uint16_t>());
     return tid;
 }
 
@@ -55,14 +53,14 @@ ScadaApplication::FreeSockets()
 }
 
 void
-ScadaApplication::AddRTU(Address ip, uint16_t port)
+ScadaApplication::AddRTU(ns3::Address ip, uint16_t port)
 {
     m_peerAddresses.push_back(ip);
     m_peerPort = port;
 }
 
 void
-ScadaApplication::AddRTU(Address addr)
+ScadaApplication::AddRTU(ns3::Address addr)
 {
     m_peerAddresses.push_back(addr);
 }
@@ -82,27 +80,22 @@ ScadaApplication::StartApplication()
         return;
     }
     m_started = true;
-    m_stopTime = Seconds(20.0);
+    m_stopTime = ns3::Seconds(20.0);
 
-    for (Address address : m_peerAddresses)
+    // Setup communication with each remote terminal unit
+    for (ns3::Address address : m_peerAddresses)
     {
-        TypeId tid = TypeId::LookupByName("ns3::TcpSocketFactory");
-        Ptr<Socket> socket = Socket::CreateSocket(GetNode(), tid);
-        if (Ipv4Address::IsMatchingType(address) == true)
+        // Create a socket
+        ns3::TypeId tid = ns3::TypeId::LookupByName("ns3::TcpSocketFactory");
+        ns3::Ptr<ns3::Socket> socket = ns3::Socket::CreateSocket(GetNode(), tid);
+
+        if (ns3::Ipv4Address::IsMatchingType(address) == true)
         {
             if (socket->Bind() == -1)
             {
                 NS_FATAL_ERROR("Failed to bind socket");
             }
-            socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(address), m_peerPort));
-        }
-        else if (InetSocketAddress::IsMatchingType(address) == true)
-        {
-            if (socket->Bind() == -1)
-            {
-                NS_FATAL_ERROR("Failed to bind socket");
-            }
-            socket->Connect(address);
+            socket->Connect(ns3::InetSocketAddress(ns3::Ipv4Address::ConvertFrom(address), m_peerPort));
         }
         else
         {
@@ -115,7 +108,7 @@ ScadaApplication::StartApplication()
         m_sockets.push_back(socket);
     }
 
-    ScheduleUpdate(Seconds(0.));
+    ScheduleUpdate(ns3::Seconds(0.));
 }
 
 void
@@ -124,20 +117,9 @@ ScadaApplication::StopApplication()
     for (auto socket : m_sockets)
     {
         socket->Close();
-        socket->SetRecvCallback(MakeNullCallback<void, Ptr<Socket>>());
+        socket->SetRecvCallback(ns3::MakeNullCallback<void, ns3::Ptr<ns3::Socket>>());
         socket = nullptr;
     }
-}
-
-void
-ScadaApplication::SetFill(uint8_t unitID)
-{
-    m_ModBusADU.SetTransactionID(m_transactionId);
-    m_transactionId++;
-
-    m_ModBusADU.SetUnitID(unitID);
-
-    m_ModBusADU.SetFunctionCode(MB_FunctionCode::ReadCoils);
 }
 
 void
@@ -153,11 +135,9 @@ ScadaApplication::SetFill(uint8_t unitId, MB_FunctionCode fc, std::vector<uint16
     m_ModBusADU.SetData<uint16_t>(data);
 }
 
-void ScadaApplication::ScheduleUpdate(Time dt)
+void ScadaApplication::ScheduleUpdate(ns3::Time dt)
 {
-    // m_sendEvent = Simulator::Schedule(dt, &ScadaApplication::Send, this);
-    //Simulator::Schedule(dt, &ScadaApplication::SendAll, this);
-    Simulator::Schedule(dt, &ScadaApplication::DoUpdate, this);
+    ns3::Simulator::Schedule(dt, &ScadaApplication::DoUpdate, this);
 }
 
 void
@@ -166,8 +146,8 @@ ScadaApplication::SendAll()
     for (int i = 0; i < m_sockets.size(); i++)
     {
         // Once the API is implemented
-        Ptr<Socket> socket = m_sockets[i];
-        Address address = m_peerAddresses[i];
+        ns3::Ptr<ns3::Socket> socket = m_sockets[i];
+        ns3::Address address = m_peerAddresses[i];
 
         // Is there a way to do this without a raw pointer?
         ScadaReadings *readconfigs;
@@ -189,7 +169,7 @@ ScadaApplication::SendAll()
             data[0] = readconfigs->m_readings.startCoil;
             data[1] = readconfigs->m_readings.numCoil;
             SetFill(i+1, MB_FunctionCode::ReadCoils, data);
-            Ptr<Packet> p = m_ModBusADU.ToPacket();
+            ns3::Ptr<ns3::Packet> p = m_ModBusADU.ToPacket();
             socket->Send(p);
         }
         if (readconfigs->m_readings.numInRegs > 0 && !readconfigs->m_pendingInReg)
@@ -199,7 +179,7 @@ ScadaApplication::SendAll()
             data[0] = readconfigs->m_readings.startInRegs;
             data[1] = readconfigs->m_readings.numInRegs;
             SetFill(i+1, MB_FunctionCode::ReadInputRegisters, data);
-            Ptr<Packet> p = m_ModBusADU.ToPacket()->CreateFragment(0, m_ModBusADU.GetBufferSize());
+            ns3::Ptr<ns3::Packet> p = m_ModBusADU.ToPacket()->CreateFragment(0, m_ModBusADU.GetBufferSize());
             socket->Send(p);
             socket->GetTxAvailable();
         }
@@ -210,7 +190,7 @@ ScadaApplication::SendAll()
             data[0] = readconfigs->m_readings.startDiscreteIn;
             data[1] = readconfigs->m_readings.numDiscreteIn;
             SetFill(i+1, MB_FunctionCode::ReadDiscreteInputs, data);
-            Ptr<Packet> p = m_ModBusADU.ToPacket();
+            ns3::Ptr<ns3::Packet> p = m_ModBusADU.ToPacket();
             socket->Send(p);
         }
     }
@@ -220,13 +200,13 @@ ScadaApplication::SendAll()
  * Here we should decode the incomming data to affect the ScadaApplication's state
  */
 void
-ScadaApplication::HandleRead(Ptr<Socket> socket)
+ScadaApplication::HandleRead(ns3::Ptr<ns3::Socket> socket)
 {
-    Ptr<Packet> packet;
-    Address from;
+    ns3::Ptr<ns3::Packet> packet;
+    ns3::Address from;
     while ((packet = socket->RecvFrom(from)))
     {
-        if (InetSocketAddress::IsMatchingType(from))
+        if (ns3::InetSocketAddress::IsMatchingType(from))
         {
             // Inbound Modbus ADU
             std::vector<ModbusADU> inboundADUs = ModbusADU::GetModbusADUs(packet);
@@ -278,7 +258,7 @@ ScadaApplication::DoUpdate()
     // Send Data
     SendAll();
 
-    if (Simulator::Now() < m_stopTime)
+    if (ns3::Simulator::Now() < m_stopTime)
     {
         ScheduleUpdate(m_interval);
     }
@@ -286,7 +266,7 @@ ScadaApplication::DoUpdate()
 
 void
 ScadaApplication::SetReadConfigForPlc(
-    Ptr<PlcApplication> plc,
+    ns3::Ptr<PlcApplication> plc,
     std::tuple<uint16_t, uint16_t> coils,
     std::tuple<uint16_t, uint16_t> discreteIn,
     std::tuple<uint16_t, uint16_t> inputReg
@@ -301,6 +281,6 @@ ScadaApplication::SetReadConfigForPlc(
     readConfig.startInRegs = std::get<0>(inputReg);
     readConfig.numInRegs = std::get<1>(inputReg);
 
-    m_ReadConfigs.insert( std::pair<Address, ScadaReadings>(plc->GetAddress(), readConfig));
+    m_ReadConfigs.insert( std::pair<ns3::Address, ScadaReadings>(plc->GetAddress(), readConfig));
 }
 

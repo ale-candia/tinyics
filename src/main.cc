@@ -20,9 +20,9 @@ int
 main(int argc, char* argv[])
 {
     // Define the automation stations (PLC and SCADA systems)
-    Ptr<PlcApplication> plc1 = CreateObject<PlcApplication>("plc1");
-    Ptr<PlcApplication> plc2 = CreateObject<PlcApplication>("plc2");
-    Ptr<ScadaApplication> scada = CreateObject<ScadaApplication>("scada");
+    ns3::Ptr<PlcApplication> plc1 = ns3::CreateObject<PlcApplication>("plc1");
+    ns3::Ptr<PlcApplication> plc2 = ns3::CreateObject<PlcApplication>("plc2");
+    ns3::Ptr<ScadaApplication> scada = ns3::CreateObject<ScadaApplication>("scada");
 
     // Define and link the processes to be controlled to their PLCs
     plc1 -> LinkProcess(IndustrialProcessType::WATER_TANK);
@@ -49,7 +49,7 @@ main(int argc, char* argv[])
     networkBuilder.EnablePcap("sim");
 
     // Run the simulation
-    Simulator::Run();
-    Simulator::Destroy();
+    ns3::Simulator::Run();
+    ns3::Simulator::Destroy();
 }
 

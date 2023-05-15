@@ -2,8 +2,6 @@
 
 - Code clean up.
 
-- Packaging application and github repo.
-
 - Documentation.
 
 - SCADA still needs to parse incoming Modbus Packets and update its state witht that data
@@ -12,17 +10,17 @@
   be defined by the user and internally we'll use a DoUpdateState which will be a wrapper that will call UpdateState and then SendAll to send
   the Modbus read command to all RTUs. The states themselves should be modified in the HandleRead function whenever the packet arrives.
 
-### LOWER PRIORITY ###
-
 - Python bindings.
 
-- Read incomming data from the SCADA
+### LOWER PRIORITY ###
+
+- Build wrapper for Simulation::Run() and Simulation::Stop() that builds the network, without calling BuildNetwork() in the IndustrialNetworkBuilder.
 
 - Is m_Interval needed in the SCADA? We could receive the data the PLC and send a new request right away.
 
 - Rename scada-state to scada-readings?.
 
-- Find a way of setting a global simulation time.
+- Find a way of setting a global simulation time, i.e. a time at which all simulations end.
 
 - Rename SCADA to HMI?
 

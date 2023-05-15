@@ -1,20 +1,19 @@
 #include "industrial-network-builder.h"
 #include "ns3/names.h"
 
-IndustrialNetworkBuilder::IndustrialNetworkBuilder(Ipv4Address network, Ipv4Mask mask)
+IndustrialNetworkBuilder::IndustrialNetworkBuilder(ns3::Ipv4Address network, ns3::Ipv4Mask mask)
 {
-    // This are all values typically found in Ethernet/IP networks
-    m_csma = std::make_shared<CsmaHelper>();
-    m_csma -> SetChannelAttribute("DataRate", DataRateValue(DataRate(8000000)));     // 1Gb/s
-    m_csma -> SetChannelAttribute("Delay", TimeValue(MicroSeconds(87)));
-    m_csma -> SetDeviceAttribute("Mtu", UintegerValue(1500));
+    m_csma = ns3::CsmaHelper();
+    m_csma.SetChannelAttribute("DataRate", ETH_DATA_RATE);     // 1Gb/s
+    m_csma.SetChannelAttribute("Delay", ETH_DELAY);
+    m_csma.SetDeviceAttribute("Mtu", ETH_MTU);
 
-    m_ipv4Address = std::make_shared<Ipv4AddressHelper>();
-    m_ipv4Address -> SetBase(network, mask);
+    m_ipv4Address = ns3::Ipv4AddressHelper();
+    m_ipv4Address.SetBase(network, mask);
 }
 
 void
-IndustrialNetworkBuilder::AddToNetwork(Ptr<IndustrialApplication> app)
+IndustrialNetworkBuilder::AddToNetwork(ns3::Ptr<IndustrialApplication> app)
 {
     if (app->GetNode()) {
         std::clog << "Node already in the network\n"
@@ -24,9 +23,9 @@ IndustrialNetworkBuilder::AddToNetwork(Ptr<IndustrialApplication> app)
         throw std::exception();
     }
 
-    Ptr<Node> node = CreateObject<Node>();
+    ns3::Ptr<ns3::Node> node = ns3::CreateObject<ns3::Node>();
     node->AddApplication(app);
-    Names::Add(app->GetName(), node);
+    ns3::Names::Add(app->GetName(), node);
 
     m_applications.push_back(app);
 }
@@ -34,13 +33,13 @@ IndustrialNetworkBuilder::AddToNetwork(Ptr<IndustrialApplication> app)
 void
 IndustrialNetworkBuilder::BuildNetwork()
 {
-    NodeContainer nodes = GetAllNodes();
+    ns3::NodeContainer nodes = GetAllNodes();
 
-    InternetStackHelper internet;
+    ns3::InternetStackHelper internet;
     internet.Install(nodes);
-    NetDeviceContainer devices = m_csma -> Install(nodes);
+    ns3::NetDeviceContainer devices = m_csma.Install(nodes);
 
-    Ipv4InterfaceContainer i = m_ipv4Address -> Assign(devices);
+    ns3::Ipv4InterfaceContainer i = m_ipv4Address.Assign(devices);
 
     for (int app = 0; app < m_applications.size(); app++)
     {
@@ -51,10 +50,10 @@ IndustrialNetworkBuilder::BuildNetwork()
     }
 }
 
-NodeContainer
+ns3::NodeContainer
 IndustrialNetworkBuilder::GetAllNodes()
 {
-    NodeContainer n;
+    ns3::NodeContainer n;
     for (int i = 0; i < m_applications.size(); i++)
     {
         n.Add(m_applications[i]->GetNode());
@@ -66,8 +65,6 @@ IndustrialNetworkBuilder::GetAllNodes()
 void
 IndustrialNetworkBuilder::EnablePcap(std::string filePrefix)
 {
-    if (m_csma)
-    {
-        m_csma->EnablePcapAll(filePrefix);
-    }
+    m_csma.EnablePcapAll(filePrefix);
 }
+

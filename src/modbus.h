@@ -55,6 +55,15 @@ public:
     uint8_t GetDataByte(uint8_t idx) const;
     uint32_t GetBufferSize() const;
 
+    /**
+     * Gets the ADUs contained in the packet.
+     *
+     * When we send data over the socket we read some stream of
+     * bytes, this will parse those bytes into Modbus Application
+     * Data Units
+     *
+     * returns ADUs contained in the packet
+     */
     static std::vector<ModbusADU> GetModbusADUs(const ns3::Ptr<ns3::Packet>& packet);
 
     /**
@@ -66,6 +75,7 @@ public:
 
 private:
     ModbusADU(const uint8_t* buff, uint16_t start, uint16_t finish);
+
     /// Position in the ADU byte buffer
     enum FieldStartPosition
     {
@@ -80,16 +90,17 @@ private:
 
     void SetInitialValues();
     
-    // Elements of the Modbus ADU
-    uint8_t *m_ADUBytes;
-    uint8_t m_BufferSize;
+    uint8_t *m_Bytes;   //< data in the ADU
+    uint8_t m_Size;     //< size of the ADU byte buffer
 };
 
 template<typename T>
 void
 ModbusADU::SetData(const std::vector<T>& data)
 {
+    // The amount of data that will be inserted in the packet
     uint8_t dataSize;
+
     if (std::is_same<T, uint8_t>::value)
     {
         dataSize = data.size();
@@ -103,21 +114,21 @@ ModbusADU::SetData(const std::vector<T>& data)
         NS_FATAL_ERROR("Can only load uint8_t or uint16_t into Modbus ADU");
     }
 
-    if (m_BufferSize != dataSize + MB_BASE_SZ)
+    if (m_Size != dataSize + MB_BASE_SZ)
     {
-        m_BufferSize = dataSize + MB_BASE_SZ;
+        m_Size = dataSize + MB_BASE_SZ;
 
         // Allocate memory for the new data
-        uint8_t *buffer = new uint8_t[m_BufferSize];
+        uint8_t *buffer = new uint8_t[m_Size];
 
         // Copy old data into new buffer
-        memcpy(buffer, m_ADUBytes, MB_BASE_SZ);
+        memcpy(buffer, m_Bytes, MB_BASE_SZ);
 
         // Free old data, we don't need it anymore
-        delete m_ADUBytes;
+        delete m_Bytes;
 
         // Use newly created buffer
-        m_ADUBytes = buffer;
+        m_Bytes = buffer;
 
         SetLengthField(dataSize + 2);
     }
@@ -130,8 +141,8 @@ ModbusADU::SetData(const std::vector<T>& data)
         {
             auto [higher, lower] = SplitUint16(byte);
 
-            m_ADUBytes[MB_BASE_SZ + i] = higher;
-            m_ADUBytes[MB_BASE_SZ + i + 1] = lower;
+            m_Bytes[MB_BASE_SZ + i] = higher;
+            m_Bytes[MB_BASE_SZ + i + 1] = lower;
 
             i+=2;
         }
@@ -141,7 +152,7 @@ ModbusADU::SetData(const std::vector<T>& data)
     {
         for (auto byte : data)
         {
-            m_ADUBytes[MB_BASE_SZ + i] = byte;
+            m_Bytes[MB_BASE_SZ + i] = byte;
             i++;
         }
     }

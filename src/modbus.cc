@@ -3,8 +3,8 @@
 
 ModbusADU::ModbusADU()
 {
-    m_BufferSize = MB_BASE_SZ;
-    m_ADUBytes = new uint8_t[m_BufferSize];
+    m_Size = MB_BASE_SZ;
+    m_Bytes = new uint8_t[m_Size];
     SetInitialValues();
 }
 
@@ -14,30 +14,30 @@ ModbusADU::ModbusADU(const uint8_t *buff, uint16_t start, uint16_t finish)
     {
         NS_FATAL_ERROR_NO_MSG();
     }
-    m_BufferSize = finish - start + 1;
+    m_Size = finish - start + 1;
 
-    if (m_BufferSize < MB_BASE_SZ)
+    if (m_Size < MB_BASE_SZ)
     {
         NS_FATAL_ERROR("Modbus Application Data Unit should be at least" << MB_BASE_SZ << "Bytes");
     }
 
-    m_ADUBytes = new uint8_t[m_BufferSize];
+    m_Bytes = new uint8_t[m_Size];
 
-    memcpy(m_ADUBytes, buff + start, m_BufferSize);
+    memcpy(m_Bytes, buff + start, m_Size);
 }
 
 ModbusADU::ModbusADU(ModbusADU&& other) noexcept
 {
-    m_BufferSize = other.m_BufferSize;
-    m_ADUBytes = other.m_ADUBytes;
+    m_Size = other.m_Size;
+    m_Bytes = other.m_Bytes;
 
-    other.m_BufferSize = 0;
-    other.m_ADUBytes = nullptr;
+    other.m_Size = 0;
+    other.m_Bytes = nullptr;
 }
 
 ModbusADU::~ModbusADU()
 {
-    delete m_ADUBytes;
+    delete m_Bytes;
 }
 
 std::vector<ModbusADU>
@@ -86,17 +86,17 @@ ModbusADU::GetModbusADUs(const ns3::Ptr<ns3::Packet>& packet)
 
 ModbusADU& ModbusADU::operator=(ModbusADU source)
 {
-    if (m_BufferSize != source.m_BufferSize)
+    if (m_Size != source.m_Size)
     {
         // Free old data
-        delete m_ADUBytes;
+        delete m_Bytes;
 
         // Copy the data from the source Modbus ADU
-        m_BufferSize = source.m_BufferSize;
-        m_ADUBytes = new uint8_t[m_BufferSize];
+        m_Size = source.m_Size;
+        m_Bytes = new uint8_t[m_Size];
     }
 
-    memcpy(m_ADUBytes, source.m_ADUBytes, m_BufferSize);
+    memcpy(m_Bytes, source.m_Bytes, m_Size);
 
     return *this;
 }
@@ -104,26 +104,26 @@ ModbusADU& ModbusADU::operator=(ModbusADU source)
 void
 ModbusADU::CopyBase(const ModbusADU& source, ModbusADU& dest)
 {
-    if (source.m_BufferSize < MB_BASE_SZ)
+    if (source.m_Size < MB_BASE_SZ)
     {
         NS_FATAL_ERROR("Trying to copy invalid ADU");
     }
 
-    if (dest.m_BufferSize != MB_BASE_SZ)
+    if (dest.m_Size != MB_BASE_SZ)
     {
-        delete dest.m_ADUBytes;
+        delete dest.m_Bytes;
 
-        dest.m_BufferSize = MB_BASE_SZ;
-        dest.m_ADUBytes = new uint8_t[dest.m_BufferSize];
+        dest.m_Size = MB_BASE_SZ;
+        dest.m_Bytes = new uint8_t[dest.m_Size];
     }
 
-    memcpy(dest.m_ADUBytes, source.m_ADUBytes, dest.m_BufferSize);
+    memcpy(dest.m_Bytes, source.m_Bytes, dest.m_Size);
 }
 
 void
 ModbusADU::SetTransactionID(uint16_t tid)
 {
-    if (!m_ADUBytes)
+    if (!m_Bytes)
     {
         NS_FATAL_ERROR("Called SetTransactionId with an empty byte buffer");
     }
@@ -131,14 +131,14 @@ ModbusADU::SetTransactionID(uint16_t tid)
     // Load the Transaction Identifier
     auto [higher, lower] = SplitUint16(tid);
 
-    m_ADUBytes[TRANSACTION_ID_POS] = higher;
-    m_ADUBytes[TRANSACTION_ID_POS + 1] = lower;
+    m_Bytes[TRANSACTION_ID_POS] = higher;
+    m_Bytes[TRANSACTION_ID_POS + 1] = lower;
 }
 
 void
 ModbusADU::SetLengthField(uint16_t length)
 {
-    if (!m_ADUBytes)
+    if (!m_Bytes)
     {
         NS_FATAL_ERROR("Called SetTransactionId with an empty byte buffer");
     }
@@ -146,38 +146,38 @@ ModbusADU::SetLengthField(uint16_t length)
     // Load the Lenght Field
     auto [higher, lower] = SplitUint16(length);
 
-    m_ADUBytes[LENGTH_FIELD_POS] = higher;
-    m_ADUBytes[LENGTH_FIELD_POS + 1] = lower;
+    m_Bytes[LENGTH_FIELD_POS] = higher;
+    m_Bytes[LENGTH_FIELD_POS + 1] = lower;
 }
 
 void
 ModbusADU::SetUnitID(uint8_t uid)
 {
-    if (!m_ADUBytes)
+    if (!m_Bytes)
     {
         NS_FATAL_ERROR("Called SetUnitID with an empty byte buffer");
     }
 
-    m_ADUBytes[UNIT_ID_POS] = uid;
+    m_Bytes[UNIT_ID_POS] = uid;
 }
 
 void
 ModbusADU::SetFunctionCode(MB_FunctionCode fc)
 {
-    if (!m_ADUBytes)
+    if (!m_Bytes)
     {
         NS_FATAL_ERROR("Called SetUnitID with an empty byte buffer");
     }
 
-    m_ADUBytes[FUNCTION_CODE_POS] = (uint8_t)fc;
+    m_Bytes[FUNCTION_CODE_POS] = (uint8_t)fc;
 }
 
 uint16_t
 ModbusADU::GetTransactionID() const
 {
     return CombineUint8(
-        m_ADUBytes[TRANSACTION_ID_POS],
-        m_ADUBytes[TRANSACTION_ID_POS + 1]
+        m_Bytes[TRANSACTION_ID_POS],
+        m_Bytes[TRANSACTION_ID_POS + 1]
     );
 };
 
@@ -185,46 +185,46 @@ uint16_t
 ModbusADU::GetLengthField() const
 {
     return CombineUint8(
-        m_ADUBytes[LENGTH_FIELD_POS],
-        m_ADUBytes[LENGTH_FIELD_POS + 1]
+        m_Bytes[LENGTH_FIELD_POS],
+        m_Bytes[LENGTH_FIELD_POS + 1]
     );
 }
 
 uint8_t
 ModbusADU::GetUnitID() const
 {
-    return m_ADUBytes[UNIT_ID_POS];
+    return m_Bytes[UNIT_ID_POS];
 }
 
 uint8_t
 ModbusADU::GetFunctionCode() const
 {
-    return m_ADUBytes[FUNCTION_CODE_POS];
+    return m_Bytes[FUNCTION_CODE_POS];
 }
 
 uint32_t
 ModbusADU::GetBufferSize() const
 {
-    return m_BufferSize;
+    return m_Size;
 }
 
 ns3::Ptr<ns3::Packet>
 ModbusADU::ToPacket() const
 {
-    return ns3::Create<ns3::Packet>(m_ADUBytes, m_BufferSize);
+    return ns3::Create<ns3::Packet>(m_Bytes, m_Size);
 }
 
 void
 ModbusADU::SetInitialValues()
 {
-    if (!m_ADUBytes)
+    if (!m_Bytes)
     {
         NS_FATAL_ERROR("Called SetInitialValues with an empty byte buffer");
     }
 
     // Set protocol identifier to 0 for Modbus TCP
-    m_ADUBytes[PROTOCOL_ID_POS] = 0;
-    m_ADUBytes[PROTOCOL_ID_POS + 1] = 0;
+    m_Bytes[PROTOCOL_ID_POS] = 0;
+    m_Bytes[PROTOCOL_ID_POS + 1] = 0;
 
     // Set Length Field to (no data)
     SetLengthField(0);
@@ -235,10 +235,10 @@ ModbusADU::GetDataByte(uint8_t idx) const
 {
     if (idx >= GetLengthField() - 2)
     {
-        std::cout << "buffer size: " << (int)m_BufferSize << std::endl;
+        std::cout << "buffer size: " << (int)m_Size << std::endl;
         NS_FATAL_ERROR("Index out of range for data bytes in Modbus ADU");
     }
 
-    return m_ADUBytes[MB_BASE_SZ + idx];
+    return m_Bytes[MB_BASE_SZ + idx];
 }
 
