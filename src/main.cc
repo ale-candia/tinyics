@@ -39,12 +39,8 @@ main(int argc, char* argv[])
     scada->AddRTU(plc1->GetAddress());
     scada->AddRTU(plc2->GetAddress());
 
-    scada->SetReadConfigForPlc(
-        plc1,
-        std::make_tuple<uint16_t, uint16_t>(0, 5),
-        std::make_tuple<uint16_t, uint16_t>(0, 0),
-        std::make_tuple<uint16_t, uint16_t>(0, 1)
-    );
+    scada->AddVariable(plc1, "X0", VarType::Coil, 0);
+    scada->AddVariable(plc1, "X1", VarType::Coil, 1);
 
     networkBuilder.EnablePcap("sim");
 

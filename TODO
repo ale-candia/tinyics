@@ -1,16 +1,14 @@
 ### CURRENTLY WORKING ON ###
 
-- Code clean up.
-
-- Documentation.
-
-- SCADA still needs to parse incoming Modbus Packets and update its state witht that data
-
-- Implement the SCADA and PLC loops (this means custom logic). Here for the SCADA we should have some sort of UpdateState that will eventually
-  be defined by the user and internally we'll use a DoUpdateState which will be a wrapper that will call UpdateState and then SendAll to send
-  the Modbus read command to all RTUs. The states themselves should be modified in the HandleRead function whenever the packet arrives.
-
 - Python bindings.
+
+- Implement the SCADA and PLC loops (this means custom logic). Here for the SCADA we should have some sort of UpdateState that will eventually be defined by the user and internally we'll use a DoUpdateState which will be a wrapper that will call UpdateState and then SendAll to send the Modbus read command to all RTUs. The states themselves should be modified in the HandleRead function whenever the packet arrives.
+
+- SCADA still needs to parse incoming Modbus Packets and update its state with that data
+
+- Improve ScadaReadings to be more scalable
+
+- Refactor parsing of the Modbus ADUs to use the Command Pattern
 
 ### LOWER PRIORITY ###
 

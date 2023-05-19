@@ -31,16 +31,12 @@ ScadaApplication::GetTypeId()
 ScadaApplication::ScadaApplication(const char* name) : IndustrialApplication(name)
 {
     FreeSockets();
-    //m_data = nullptr;
     m_started = false;
 }
 
 ScadaApplication::~ScadaApplication()
 {
     FreeSockets();
-
-    //delete[] m_data;
-    //m_data = nullptr;
 }
 
 void
@@ -125,14 +121,14 @@ ScadaApplication::StopApplication()
 void
 ScadaApplication::SetFill(uint8_t unitId, MB_FunctionCode fc, std::vector<uint16_t> data)
 {
-    m_ModBusADU.SetTransactionID(m_transactionId);
+    m_modBusADU.SetTransactionID(m_transactionId);
     m_transactionId++;
 
-    m_ModBusADU.SetUnitID(unitId);
+    m_modBusADU.SetUnitID(unitId);
 
-    m_ModBusADU.SetFunctionCode(fc);
+    m_modBusADU.SetFunctionCode(fc);
 
-    m_ModBusADU.SetData<uint16_t>(data);
+    m_modBusADU.SetData<uint16_t>(data);
 }
 
 void ScadaApplication::ScheduleUpdate(ns3::Time dt)
@@ -153,7 +149,7 @@ ScadaApplication::SendAll()
         ScadaReadings *readconfigs;
         try
         {
-            readconfigs = &m_ReadConfigs.at(address);
+            readconfigs = &m_readConfigs.at(address);
         }
         catch (std::out_of_range exception)
         {
@@ -169,7 +165,7 @@ ScadaApplication::SendAll()
             data[0] = readconfigs->m_readings.startCoil;
             data[1] = readconfigs->m_readings.numCoil;
             SetFill(i+1, MB_FunctionCode::ReadCoils, data);
-            ns3::Ptr<ns3::Packet> p = m_ModBusADU.ToPacket();
+            ns3::Ptr<ns3::Packet> p = m_modBusADU.ToPacket();
             socket->Send(p);
         }
         if (readconfigs->m_readings.numInRegs > 0 && !readconfigs->m_pendingInReg)
@@ -179,7 +175,7 @@ ScadaApplication::SendAll()
             data[0] = readconfigs->m_readings.startInRegs;
             data[1] = readconfigs->m_readings.numInRegs;
             SetFill(i+1, MB_FunctionCode::ReadInputRegisters, data);
-            ns3::Ptr<ns3::Packet> p = m_ModBusADU.ToPacket()->CreateFragment(0, m_ModBusADU.GetBufferSize());
+            ns3::Ptr<ns3::Packet> p = m_modBusADU.ToPacket();
             socket->Send(p);
             socket->GetTxAvailable();
         }
@@ -190,7 +186,7 @@ ScadaApplication::SendAll()
             data[0] = readconfigs->m_readings.startDiscreteIn;
             data[1] = readconfigs->m_readings.numDiscreteIn;
             SetFill(i+1, MB_FunctionCode::ReadDiscreteInputs, data);
-            ns3::Ptr<ns3::Packet> p = m_ModBusADU.ToPacket();
+            ns3::Ptr<ns3::Packet> p = m_modBusADU.ToPacket();
             socket->Send(p);
         }
     }
@@ -220,7 +216,7 @@ ScadaApplication::HandleRead(ns3::Ptr<ns3::Socket> socket)
                 {
                     // Use the unit identifier to retrieve address, since the from
                     // address has lost the Address format
-                    readconfigs = &m_ReadConfigs.at(m_peerAddresses[adu.GetUnitID() - 1]);
+                    readconfigs = &m_readConfigs.at(m_peerAddresses[adu.GetUnitID() - 1]);
                 }
                 catch (std::out_of_range exception)
                 {
@@ -265,22 +261,89 @@ ScadaApplication::DoUpdate()
 }
 
 void
-ScadaApplication::SetReadConfigForPlc(
-    ns3::Ptr<PlcApplication> plc,
-    std::tuple<uint16_t, uint16_t> coils,
-    std::tuple<uint16_t, uint16_t> discreteIn,
-    std::tuple<uint16_t, uint16_t> inputReg
+ScadaApplication::AddVariable(
+    const ns3::Ptr<PlcApplication>& plc,
+    std::string name,
+    VarType type,
+    uint8_t pos
 ){
-    ScadaReadingsConfig readConfig;
-    readConfig.startCoil = std::get<0>(coils);
-    readConfig.numCoil = std::get<1>(coils);
+    // Add the variable
+    m_vars.insert(std::pair<std::string, Var>(name, Var(type, pos)));
 
-    readConfig.startDiscreteIn = std::get<0>(discreteIn);
-    readConfig.numDiscreteIn = std::get<1>(discreteIn);
+    ns3::Address plcAddr = plc -> GetAddress();
+    // Add read config if it doesn't exist
+    if (m_readConfigs.find(plcAddr) == m_readConfigs.end())
+    {
+        m_readConfigs.insert(
+            std::pair<ns3::Address, ScadaReadings>(plcAddr, ScadaReadingsConfig())
+        );
+    }
 
-    readConfig.startInRegs = std::get<0>(inputReg);
-    readConfig.numInRegs = std::get<1>(inputReg);
+    // Update the Read Configurations
+    if (type == VarType::Coil)
+    {
+        uint16_t start = m_readConfigs[plcAddr].m_readings.startCoil;
+        uint16_t num = m_readConfigs[plcAddr].m_readings.numCoil;
+        uint16_t end;
 
-    m_ReadConfigs.insert( std::pair<ns3::Address, ScadaReadings>(plc->GetAddress(), readConfig));
+        if (num == 0 && start == 0)
+            start = end = pos;
+
+        else if (pos < start)
+            start = pos;
+
+        else if (pos > end)
+            end = (pos > 7) ? 7 : pos;
+
+        m_readConfigs[plcAddr].m_readings.startCoil = start;
+        m_readConfigs[plcAddr].m_readings.numCoil = end - start + 1;
+    }
+
+    if (type == VarType::DigitalInput)
+    {
+        uint16_t start = m_readConfigs[plcAddr].m_readings.startDiscreteIn;
+        uint16_t num = m_readConfigs[plcAddr].m_readings.numDiscreteIn;
+        uint16_t end;
+
+        if (num == 0 && start == 0)
+            start = end = pos;
+
+        else if (pos < start)
+            start = pos;
+
+        else if (pos > end)
+            end = (pos > 7) ? 7 : pos;
+
+        m_readConfigs[plcAddr].m_readings.startDiscreteIn = start;
+        m_readConfigs[plcAddr].m_readings.numDiscreteIn = end - start + 1;
+    }
+
+    if (type == VarType::InputRegister)
+    {
+        uint16_t start = m_readConfigs[plcAddr].m_readings.startInRegs;
+        uint16_t num = m_readConfigs[plcAddr].m_readings.numInRegs;
+        uint16_t end;
+
+        if (num == 0 && start == 0)
+            start = end = pos;
+
+        else if (pos < start)
+            start = pos;
+
+        else if (pos > end)
+            end = (pos > 1) ? 1 : pos;
+
+        m_readConfigs[plcAddr].m_readings.startInRegs = start;
+        m_readConfigs[plcAddr].m_readings.numInRegs = end - start + 1;
+    }
+}
+
+void
+ScadaApplication::AddVariable(
+    const ns3::Ptr<PlcApplication>& plc,
+    std::string name,
+    VarType type
+){
+    m_vars.insert(std::pair<std::string, Var>(name, Var(type, 0)));
 }
 

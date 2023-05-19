@@ -17,6 +17,26 @@ namespace ns3
     class Packet;
 }
 
+enum VarType
+{
+    Coil,
+    DigitalInput,
+    InputRegister,
+    LocalVariable,
+};
+
+class Var
+{
+public:
+    Var(VarType type, uint8_t pos)
+        : m_type(type), m_pos(pos), m_value(0) {}
+    
+private:
+    VarType m_type;
+    uint16_t m_value;
+    uint8_t m_pos;
+};
+
 /**
  * A ScadaApplication (acts as a Modbus TCP client)
  *
@@ -50,20 +70,8 @@ public:
      */
     void AddRTU(ns3::Address addr);
 
-    /**
-     * Select the data that is going to be read from the PLC.
-     *
-     * \param plcName name of the PLC from which we're reading the data
-     * \param coils a tuple with values (startCoil, finishCoil)
-     * \param discreteIn a tuple with values (startDiscreteInput, finishDiscreteInput)
-     * \param coils a tuple with values (startInputRegister, finishInputRegister)
-     */
-    void SetReadConfigForPlc(
-        ns3::Ptr<PlcApplication> plc,
-        std::tuple<uint16_t, uint16_t> coils,
-        std::tuple<uint16_t, uint16_t> discreteIn,
-        std::tuple<uint16_t, uint16_t> inputReg
-    );
+    void AddVariable(const ns3::Ptr<PlcApplication>& plc, std::string name, VarType type, uint8_t pos);
+    void AddVariable(const ns3::Ptr<PlcApplication>& plc, std::string name, VarType type);
 
 protected:
     void DoDispose() override;
@@ -97,12 +105,13 @@ private:
     void SetFill(uint8_t unitId, MB_FunctionCode fc, std::vector<uint16_t> data);
 
     ns3::Time m_interval;  //!< Packet inter-send time
-    ModbusADU m_ModBusADU;  //!< Modbus Application Data Unit
+    ModbusADU m_modBusADU;  //!< Modbus Application Data Unit
     std::vector<ns3::Ptr<ns3::Socket>> m_sockets;   //!< Socket
     std::vector<ns3::Address> m_peerAddresses; //!< Remote peer address
     uint16_t m_peerPort;                  //!< Remote peer port
     bool m_started; //!< Whether the app has already started
     uint16_t m_transactionId; //!< TransactionId for the Modbus ADU
-    std::map<ns3::Address, ScadaReadings> m_ReadConfigs;
+    std::map<ns3::Address, ScadaReadings> m_readConfigs;
+    std::map<std::string, Var> m_vars;
 };
 
