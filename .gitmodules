@@ -1,3 +1,7 @@
 [submodule "external/ns-3"]
 	path = external/ns-3
 	url = https://gitlab.com/nsnam/ns-3-dev.git
+[submodule "external/pybind11"]
+	path = external/pybind11
+	url = https://github.com/pybind/pybind11.git
+	branch = stable

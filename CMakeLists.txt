@@ -18,36 +18,42 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 endif()
 
-#### Build IOT-SIM Project ####
+#### Sub directories ####
 
 add_subdirectory(external/ns-3)
+add_subdirectory(external/pybind11)
+add_subdirectory(bindings)
+add_subdirectory(sandbox)   # To use library with cpp
 
-file(GLOB SourceFiles ${PROJECT_SOURCE_DIR}/src/*.cc)
+#### Build ICS-SIM library ####
 
-add_executable(${PROJECT_NAME} ${SourceFiles})
-
-add_dependencies(${PROJECT_NAME} libcore libcsma libinternet libnetwork)
-
-target_include_directories(${PROJECT_NAME}
-    PRIVATE external/ns-3/build/include/
-    ${PROJECT_SOURCE_DIR}/src/
+set(source_files
+    src/industrial-network-builder.cc
+    src/industrial-process.cc
+    src/modbus.cc
+    src/plc-application.cc
+    src/scada-application.cc
+    src/scada-state.cc
+    src/utils.cc
 )
 
-target_link_directories(${PROJECT_NAME} PRIVATE external/ns-3/build/lib/)
+set(lib_name "icssim")
 
-target_link_libraries(${PROJECT_NAME}
-    ns3-dev-core
-    ns3-dev-csma
-    ns3-dev-internet
-    ns3-dev-network
+add_library(${lib_name} SHARED ${source_files})
+
+add_dependencies(${lib_name} libcore libcsma libinternet libnetwork)
+
+target_include_directories(${lib_name} PRIVATE
+    external/ns-3/build/include/
+    src/
 )
 
-#### Cleaning up pcap files ####
+target_link_directories(${lib_name} PRIVATE external/ns-3/build/lib/)
 
-add_custom_target(clean-pcap COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_BINARY_DIR}/*.pcap)
-
-add_custom_target(clean-all
-  make clean
-  COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_BINARY_DIR}/*.pcap
+target_link_libraries(${lib_name}
+    libcore
+    libcsma
+    libinternet
+    libnetwork
 )
 
