@@ -14,24 +14,15 @@ ScadaApplication::GetTypeId()
 {
     static ns3::TypeId tid = ns3::TypeId("ScadaApplication")
                             .SetParent<Application>()
-                            .SetGroupName("Applications")
-                            .AddAttribute("Interval",
-                                          "The time to wait between packets",
-                                          ns3::TimeValue(ns3::Seconds(1.0)),
-                                          MakeTimeAccessor(&ScadaApplication::m_interval),
-                                          ns3::MakeTimeChecker())
-                            .AddAttribute("RemotePort",
-                                          "The destination port of the outbound packets",
-                                          ns3::UintegerValue(502),
-                                          MakeUintegerAccessor(&ScadaApplication::m_peerPort),
-                                          ns3::MakeUintegerChecker<uint16_t>());
+                            .SetGroupName("Applications");
     return tid;
 }
 
 ScadaApplication::ScadaApplication(const char* name) : IndustrialApplication(name)
 {
-    FreeSockets();
     m_started = false;
+    m_interval = ns3::Seconds(1.0);
+    m_peerPort = 502;
 }
 
 ScadaApplication::~ScadaApplication()
@@ -56,7 +47,7 @@ ScadaApplication::AddRTU(ns3::Address ip, uint16_t port)
 }
 
 void
-ScadaApplication::AddRTU(ns3::Address addr)
+ScadaApplication::AddRTU(ns3::Ipv4Address addr)
 {
     m_peerAddresses.push_back(addr);
 }
@@ -263,7 +254,7 @@ ScadaApplication::DoUpdate()
 void
 ScadaApplication::AddVariable(
     const ns3::Ptr<PlcApplication>& plc,
-    std::string name,
+    const std::string& name,
     VarType type,
     uint8_t pos
 ){
@@ -340,8 +331,7 @@ ScadaApplication::AddVariable(
 
 void
 ScadaApplication::AddVariable(
-    const ns3::Ptr<PlcApplication>& plc,
-    std::string name,
+    const std::string& name,
     VarType type
 ){
     m_vars.insert(std::pair<std::string, Var>(name, Var(type, 0)));

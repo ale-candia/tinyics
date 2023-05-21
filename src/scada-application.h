@@ -68,10 +68,10 @@ public:
      *
      * \param addr remote address
      */
-    void AddRTU(ns3::Address addr);
+    void AddRTU(ns3::Ipv4Address addr);
 
-    void AddVariable(const ns3::Ptr<PlcApplication>& plc, std::string name, VarType type, uint8_t pos);
-    void AddVariable(const ns3::Ptr<PlcApplication>& plc, std::string name, VarType type);
+    void AddVariable(const ns3::Ptr<PlcApplication>& plc, const std::string& name, VarType type, uint8_t pos);
+    void AddVariable(const std::string& name, VarType type);
 
 protected:
     void DoDispose() override;

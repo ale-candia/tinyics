@@ -13,17 +13,14 @@ PlcApplication::GetTypeId()
 {
     static ns3::TypeId tid = ns3::TypeId("PlcApplication")
                             .SetParent<Application>()
-                            .SetGroupName("Applications")
-                            .AddAttribute("Port",
-                                          "Port on which we listen for incoming packets.",
-                                          ns3::UintegerValue(502),
-                                          MakeUintegerAccessor(&PlcApplication::m_port),
-                                          ns3::MakeUintegerChecker<uint16_t>());
+                            .SetGroupName("Applications");
     return tid;
 }
 
 PlcApplication::PlcApplication(const char* name) : IndustrialApplication(name)
-{}
+{
+    m_port = 502;
+}
 
 PlcApplication::~PlcApplication()
 {
