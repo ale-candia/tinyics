@@ -1,4 +1,4 @@
 try:
-    from .build.bindings.ics import *
+    from .build.bindings.industrial_networks import *
 except ImportError:
-    raise ImportError("Error importings ics, verify it has been built correctly")
+    raise ImportError("Error importings icsim, verify it has been built correctly")
