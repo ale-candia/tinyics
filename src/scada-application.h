@@ -30,6 +30,15 @@ class Var
 public:
     Var(VarType type, uint8_t pos)
         : m_type(type), m_pos(pos), m_value(0) {}
+
+    Var(VarType type, uint8_t pos, uint16_t value)
+        : m_type(type), m_pos(pos), m_value(value) {}
+
+    VarType GetType() const { return m_type; }
+    
+    uint16_t GetValue() const { return m_value; }
+
+    void SetValue(uint16_t val) { m_value = val; }
     
 private:
     VarType m_type;
@@ -71,7 +80,9 @@ public:
     void AddRTU(ns3::Ipv4Address addr);
 
     void AddVariable(const ns3::Ptr<PlcApplication>& plc, const std::string& name, VarType type, uint8_t pos);
-    void AddVariable(const std::string& name, VarType type);
+    void AddVariable(const std::string& name, uint16_t value);
+
+    void SetScadaLoop(std::function<void(std::map<std::string, Var>&)> loop);
 
 protected:
     void DoDispose() override;
@@ -113,5 +124,7 @@ private:
     uint16_t m_transactionId; //!< TransactionId for the Modbus ADU
     std::map<ns3::Address, ScadaReadings> m_readConfigs;
     std::map<std::string, Var> m_vars;
+
+    std::function<void(std::map<std::string, Var>&)> m_loop;
 };
 

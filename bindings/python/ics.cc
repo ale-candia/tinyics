@@ -2,7 +2,11 @@
 #include "industrial-network-builder.h"
 
 #include <pybind11/pybind11.h>
+#include <pybind11/functional.h>
 #include <pybind11/stl.h>
+#include <pybind11/pytypes.h>
+
+namespace py = pybind11;
 
 void
 RunSimulationWrapper()
@@ -11,7 +15,37 @@ RunSimulationWrapper()
     ns3::Simulator::Destroy();
 }
 
-namespace py = pybind11;
+
+// This needs to be switched to receive an Industrial application instead
+// so that PLC also supports it
+void
+SetApplicationLoopWrapper(ScadaApplication& scada, py::function loopFn)
+{
+    scada.SetScadaLoop([loopFn](std::map<std::string, Var>& values) {
+        // Call the python function
+        py::dict writeOut = loopFn(values);
+
+        // Convert the Python dictionary to a new C++ map
+        for (const auto& item : writeOut)
+        {
+            std::string varName = item.first.cast<std::string>();
+            try
+            {
+                Var& variable = values.at(varName);
+                if (variable.GetType() == VarType::Coil || variable.GetType() == VarType::LocalVariable)
+                {
+                    variable.SetValue(item.second.cast<uint16_t>());
+                }
+                else
+                    NS_FATAL_ERROR("Variable '" << varName << "' is not of type Coil");
+            }
+            catch (std::out_of_range exception)
+            {
+                NS_FATAL_ERROR("Variable '" << varName << "' does not exist");
+            }
+        }
+    });
+}
 
 PYBIND11_DECLARE_HOLDER_TYPE(T, ns3::Ptr<T>);
 
@@ -44,7 +78,7 @@ PYBIND11_MODULE(industrial_networks, m) {
         .def(py::init<const char*>())
         .def(
             "add_variable",
-            static_cast<void (ScadaApplication::*)(const std::string&, VarType)>(&ScadaApplication::AddVariable))
+            static_cast<void (ScadaApplication::*)(const std::string&, uint16_t)>(&ScadaApplication::AddVariable))
         .def(
             "add_variable",
             static_cast<void (ScadaApplication::*)(const ns3::Ptr<PlcApplication>&, const std::string&, VarType, uint8_t)>(&ScadaApplication::AddVariable))
@@ -55,6 +89,10 @@ PYBIND11_MODULE(industrial_networks, m) {
         .value("DigitalInput", VarType::DigitalInput)
         .value("InputRegister", VarType::InputRegister)
         .value("LocalVariable", VarType::LocalVariable);
+
+    py::class_<Var>(m, "Var")
+        .def("get_value", &Var::GetValue)
+        .def("set_value", &Var::SetValue);
 
     /**
      * Industrial Network Builder
@@ -82,8 +120,10 @@ PYBIND11_MODULE(industrial_networks, m) {
         .export_values();
 
     /**
-     * Run the simulation
+     * Wrappers
      */
     m.def("run_simulation", &RunSimulationWrapper);
+
+    m.def("set_loop", &SetApplicationLoopWrapper);
 }
 

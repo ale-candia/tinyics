@@ -137,49 +137,46 @@ ScadaApplication::SendAll()
         ns3::Address address = m_peerAddresses[i];
 
         // Is there a way to do this without a raw pointer?
-        ScadaReadings *readconfigs;
         try
         {
-            readconfigs = &m_readConfigs.at(address);
-        }
-        catch (std::out_of_range exception)
-        {
-            continue;
-        }
+            ScadaReadings& readconfigs = m_readConfigs.at(address);
 
-        std::vector<uint16_t> data(2);
+            std::vector<uint16_t> data(2);
 
-        if (readconfigs->m_readings.numCoil > 0 && !readconfigs->m_pendingCoils)
-        {
-            readconfigs->m_pendingCoils = true;
+            if (readconfigs.m_readings.numCoil > 0 && !readconfigs.m_pendingCoils)
+            {
+                readconfigs.m_pendingCoils = true;
 
-            data[0] = readconfigs->m_readings.startCoil;
-            data[1] = readconfigs->m_readings.numCoil;
-            SetFill(i+1, MB_FunctionCode::ReadCoils, data);
-            ns3::Ptr<ns3::Packet> p = m_modBusADU.ToPacket();
-            socket->Send(p);
+                data[0] = readconfigs.m_readings.startCoil;
+                data[1] = readconfigs.m_readings.numCoil;
+                SetFill(i+1, MB_FunctionCode::ReadCoils, data);
+                ns3::Ptr<ns3::Packet> p = m_modBusADU.ToPacket();
+                socket->Send(p);
+            }
+            if (readconfigs.m_readings.numInRegs > 0 && !readconfigs.m_pendingInReg)
+            {
+                readconfigs.m_pendingInReg = true;
+
+                data[0] = readconfigs.m_readings.startInRegs;
+                data[1] = readconfigs.m_readings.numInRegs;
+                SetFill(i+1, MB_FunctionCode::ReadInputRegisters, data);
+                ns3::Ptr<ns3::Packet> p = m_modBusADU.ToPacket();
+                socket->Send(p);
+                socket->GetTxAvailable();
+            }
+            if (readconfigs.m_readings.numDiscreteIn > 0 && !readconfigs.m_pendingDiscreteIn)
+            {
+                readconfigs.m_pendingDiscreteIn = true;
+
+                data[0] = readconfigs.m_readings.startDiscreteIn;
+                data[1] = readconfigs.m_readings.numDiscreteIn;
+                SetFill(i+1, MB_FunctionCode::ReadDiscreteInputs, data);
+                ns3::Ptr<ns3::Packet> p = m_modBusADU.ToPacket();
+                socket->Send(p);
+            }
         }
-        if (readconfigs->m_readings.numInRegs > 0 && !readconfigs->m_pendingInReg)
-        {
-            readconfigs->m_pendingInReg = true;
+        catch (std::out_of_range exception) { continue; }
 
-            data[0] = readconfigs->m_readings.startInRegs;
-            data[1] = readconfigs->m_readings.numInRegs;
-            SetFill(i+1, MB_FunctionCode::ReadInputRegisters, data);
-            ns3::Ptr<ns3::Packet> p = m_modBusADU.ToPacket();
-            socket->Send(p);
-            socket->GetTxAvailable();
-        }
-        if (readconfigs->m_readings.numDiscreteIn > 0 && !readconfigs->m_pendingDiscreteIn)
-        {
-            readconfigs->m_pendingDiscreteIn = true;
-
-            data[0] = readconfigs->m_readings.startDiscreteIn;
-            data[1] = readconfigs->m_readings.numDiscreteIn;
-            SetFill(i+1, MB_FunctionCode::ReadDiscreteInputs, data);
-            ns3::Ptr<ns3::Packet> p = m_modBusADU.ToPacket();
-            socket->Send(p);
-        }
     }
 }
 
@@ -200,35 +197,33 @@ ScadaApplication::HandleRead(ns3::Ptr<ns3::Socket> socket)
 
             for(const ModbusADU& adu : inboundADUs)
             {
-
-                // Is there a way to do this without a raw pointer?
-                ScadaReadings *readconfigs;
                 try
                 {
                     // Use the unit identifier to retrieve address, since the from
                     // address has lost the Address format
-                    readconfigs = &m_readConfigs.at(m_peerAddresses[adu.GetUnitID() - 1]);
+                    ScadaReadings& readconfigs = m_readConfigs.at(m_peerAddresses[adu.GetUnitID() - 1]);
+
+                    // process packet
+                    uint8_t fc = adu.GetFunctionCode();
+
+                    if (fc == MB_FunctionCode::ReadCoils)
+                    {
+                        readconfigs.m_pendingCoils = false;
+                    }
+
+                    else if (fc == MB_FunctionCode::ReadInputRegisters)
+                    {
+                        readconfigs.m_pendingInReg = false;
+                    }
+
+                    else if (fc == MB_FunctionCode::ReadDiscreteInputs)
+                    {
+                        readconfigs.m_pendingDiscreteIn = false;
+                    }
                 }
                 catch (std::out_of_range exception)
                 {
                     continue;
-                }
-                // process packet
-                uint8_t fc = adu.GetFunctionCode();
-
-                if (fc == MB_FunctionCode::ReadCoils)
-                {
-                    readconfigs->m_pendingCoils = false;
-                }
-
-                else if (fc == MB_FunctionCode::ReadInputRegisters)
-                {
-                    readconfigs->m_pendingInReg = false;
-                }
-
-                else if (fc == MB_FunctionCode::ReadDiscreteInputs)
-                {
-                    readconfigs->m_pendingDiscreteIn = false;
                 }
             }
         }
@@ -240,7 +235,10 @@ void
 ScadaApplication::DoUpdate()
 {
     // Update all statuses
-
+    if (m_loop)
+    {
+        m_loop(m_vars);
+    }
 
     // Send Data
     SendAll();
@@ -330,10 +328,16 @@ ScadaApplication::AddVariable(
 }
 
 void
+ScadaApplication::SetScadaLoop(std::function<void(std::map<std::string, Var>&)> loop)
+{
+    m_loop = loop;
+}
+
+void
 ScadaApplication::AddVariable(
     const std::string& name,
-    VarType type
+    uint16_t value = 0
 ){
-    m_vars.insert(std::pair<std::string, Var>(name, Var(type, 0)));
+    m_vars.insert(std::pair<std::string, Var>(name, Var(VarType::LocalVariable, 0, value)));
 }
 
