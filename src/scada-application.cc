@@ -22,7 +22,6 @@ ScadaApplication::ScadaApplication(const char* name) : IndustrialApplication(nam
 {
     m_started = false;
     m_interval = ns3::Seconds(1.0);
-    m_peerPort = 502;
 }
 
 ScadaApplication::~ScadaApplication()
@@ -40,16 +39,10 @@ ScadaApplication::FreeSockets()
 }
 
 void
-ScadaApplication::AddRTU(ns3::Address ip, uint16_t port)
-{
-    m_peerAddresses.push_back(ip);
-    m_peerPort = port;
-}
-
-void
 ScadaApplication::AddRTU(ns3::Ipv4Address addr)
 {
     m_peerAddresses.push_back(addr);
+    m_Commands.push_back(std::map<MB_FunctionCode, Command>());
 }
 
 void
@@ -70,7 +63,7 @@ ScadaApplication::StartApplication()
     m_stopTime = ns3::Seconds(20.0);
 
     // Setup communication with each remote terminal unit
-    for (ns3::Address address : m_peerAddresses)
+    for (const ns3::Address& address : m_peerAddresses)
     {
         // Create a socket
         ns3::TypeId tid = ns3::TypeId::LookupByName("ns3::TcpSocketFactory");
@@ -82,7 +75,7 @@ ScadaApplication::StartApplication()
             {
                 NS_FATAL_ERROR("Failed to bind socket");
             }
-            socket->Connect(ns3::InetSocketAddress(ns3::Ipv4Address::ConvertFrom(address), m_peerPort));
+            socket->Connect(ns3::InetSocketAddress(ns3::Ipv4Address::ConvertFrom(address), s_PeerPort));
         }
         else
         {
@@ -109,19 +102,6 @@ ScadaApplication::StopApplication()
     }
 }
 
-void
-ScadaApplication::SetFill(uint8_t unitId, MB_FunctionCode fc, std::vector<uint16_t> data)
-{
-    m_modBusADU.SetTransactionID(m_transactionId);
-    m_transactionId++;
-
-    m_modBusADU.SetUnitID(unitId);
-
-    m_modBusADU.SetFunctionCode(fc);
-
-    m_modBusADU.SetData<uint16_t>(data);
-}
-
 void ScadaApplication::ScheduleUpdate(ns3::Time dt)
 {
     ns3::Simulator::Schedule(dt, &ScadaApplication::DoUpdate, this);
@@ -134,48 +114,13 @@ ScadaApplication::SendAll()
     {
         // Once the API is implemented
         ns3::Ptr<ns3::Socket> socket = m_sockets[i];
-        ns3::Address address = m_peerAddresses[i];
+        const ns3::Address& address = m_peerAddresses[i];
 
-        // Is there a way to do this without a raw pointer?
-        try
+        for (const auto& command : m_Commands[i])
         {
-            ScadaReadings& readconfigs = m_readConfigs.at(address);
-
-            std::vector<uint16_t> data(2);
-
-            if (readconfigs.m_readings.numCoil > 0 && !readconfigs.m_pendingCoils)
-            {
-                readconfigs.m_pendingCoils = true;
-
-                data[0] = readconfigs.m_readings.startCoil;
-                data[1] = readconfigs.m_readings.numCoil;
-                SetFill(i+1, MB_FunctionCode::ReadCoils, data);
-                ns3::Ptr<ns3::Packet> p = m_modBusADU.ToPacket();
-                socket->Send(p);
-            }
-            if (readconfigs.m_readings.numInRegs > 0 && !readconfigs.m_pendingInReg)
-            {
-                readconfigs.m_pendingInReg = true;
-
-                data[0] = readconfigs.m_readings.startInRegs;
-                data[1] = readconfigs.m_readings.numInRegs;
-                SetFill(i+1, MB_FunctionCode::ReadInputRegisters, data);
-                ns3::Ptr<ns3::Packet> p = m_modBusADU.ToPacket();
-                socket->Send(p);
-                socket->GetTxAvailable();
-            }
-            if (readconfigs.m_readings.numDiscreteIn > 0 && !readconfigs.m_pendingDiscreteIn)
-            {
-                readconfigs.m_pendingDiscreteIn = true;
-
-                data[0] = readconfigs.m_readings.startDiscreteIn;
-                data[1] = readconfigs.m_readings.numDiscreteIn;
-                SetFill(i+1, MB_FunctionCode::ReadDiscreteInputs, data);
-                ns3::Ptr<ns3::Packet> p = m_modBusADU.ToPacket();
-                socket->Send(p);
-            }
+            command.second.Execute(socket, m_transactionId, i+1);
+            m_transactionId++;
         }
-        catch (std::out_of_range exception) { continue; }
 
     }
 }
@@ -186,6 +131,7 @@ ScadaApplication::SendAll()
 void
 ScadaApplication::HandleRead(ns3::Ptr<ns3::Socket> socket)
 {
+    /*
     ns3::Ptr<ns3::Packet> packet;
     ns3::Address from;
     while ((packet = socket->RecvFrom(from)))
@@ -228,6 +174,7 @@ ScadaApplication::HandleRead(ns3::Ptr<ns3::Socket> socket)
             }
         }
     }
+    */
 
 }
 
@@ -259,72 +206,44 @@ ScadaApplication::AddVariable(
     // Add the variable
     m_vars.insert(std::pair<std::string, Var>(name, Var(type, pos)));
 
-    ns3::Address plcAddr = plc -> GetAddress();
-    // Add read config if it doesn't exist
-    if (m_readConfigs.find(plcAddr) == m_readConfigs.end())
+    const ns3::Address& plcAddr = plc -> GetAddress();
+
+    // Cannot add a Command to an unregistered PLC (Here we could add it internally)
+    auto it = std::find(m_peerAddresses.begin(), m_peerAddresses.end(), plcAddr);
+    if (it == m_peerAddresses.end())
+        NS_FATAL_ERROR("RTU '" << plc->GetName() << "' is not register in '" << GetName() << '\'');
+
+    int idx = it - m_peerAddresses.begin();
+
+    auto& commandMap = m_Commands[idx];
+
+    // Map VarType to the corresponding modbus function code
+    MB_FunctionCode fc;
+    switch (type)
     {
-        m_readConfigs.insert(
-            std::pair<ns3::Address, ScadaReadings>(plcAddr, ScadaReadingsConfig())
-        );
+        case VarType::Coil:
+            fc = MB_FunctionCode::ReadCoils;
+            break;
+        case VarType::DigitalInput:
+            fc = MB_FunctionCode::ReadDiscreteInputs;
+            break;
+        case VarType::InputRegister:
+            fc = MB_FunctionCode::ReadInputRegisters;
+            break;
+        case VarType::LocalVariable:
+            return; // If its a local variable we don't need to add a command
     }
 
-    // Update the Read Configurations
-    if (type == VarType::Coil)
+    // If there isn't a command for the Function Code Add it
+    if (commandMap.find(fc) == commandMap.end())
     {
-        uint16_t start = m_readConfigs[plcAddr].m_readings.startCoil;
-        uint16_t num = m_readConfigs[plcAddr].m_readings.numCoil;
-        uint16_t end;
-
-        if (num == 0 && start == 0)
-            start = end = pos;
-
-        else if (pos < start)
-            start = pos;
-
-        else if (pos > end)
-            end = (pos > 7) ? 7 : pos;
-
-        m_readConfigs[plcAddr].m_readings.startCoil = start;
-        m_readConfigs[plcAddr].m_readings.numCoil = end - start + 1;
+        commandMap.insert(std::pair<MB_FunctionCode, Command>(
+            fc,
+            Command(fc, 0, 0)
+        ));
     }
 
-    if (type == VarType::DigitalInput)
-    {
-        uint16_t start = m_readConfigs[plcAddr].m_readings.startDiscreteIn;
-        uint16_t num = m_readConfigs[plcAddr].m_readings.numDiscreteIn;
-        uint16_t end;
-
-        if (num == 0 && start == 0)
-            start = end = pos;
-
-        else if (pos < start)
-            start = pos;
-
-        else if (pos > end)
-            end = (pos > 7) ? 7 : pos;
-
-        m_readConfigs[plcAddr].m_readings.startDiscreteIn = start;
-        m_readConfigs[plcAddr].m_readings.numDiscreteIn = end - start + 1;
-    }
-
-    if (type == VarType::InputRegister)
-    {
-        uint16_t start = m_readConfigs[plcAddr].m_readings.startInRegs;
-        uint16_t num = m_readConfigs[plcAddr].m_readings.numInRegs;
-        uint16_t end;
-
-        if (num == 0 && start == 0)
-            start = end = pos;
-
-        else if (pos < start)
-            start = pos;
-
-        else if (pos > end)
-            end = (pos > 1) ? 1 : pos;
-
-        m_readConfigs[plcAddr].m_readings.startInRegs = start;
-        m_readConfigs[plcAddr].m_readings.numInRegs = end - start + 1;
-    }
+    commandMap.at(fc).SetByteCount(pos);
 }
 
 void

@@ -5,21 +5,29 @@
 #include "ns3/inet-socket-address.h"
 #include "ns3/packet.h"
 #include "ns3/simulator.h"
-#include "ns3/socket.h"
-#include "ns3/uinteger.h"
 
 ns3::TypeId
 PlcApplication::GetTypeId()
 {
     static ns3::TypeId tid = ns3::TypeId("PlcApplication")
-                            .SetParent<Application>()
-                            .SetGroupName("Applications");
+        .SetParent<Application>()
+        .SetGroupName("Applications");
+
     return tid;
 }
 
 PlcApplication::PlcApplication(const char* name) : IndustrialApplication(name)
 {
-    m_port = 502;
+    // Setup Modbus Responses (Can also be created dynamically/on demand if needed)
+    m_RequestProcessors.insert(
+        std::pair(MB_FunctionCode::ReadCoils, std::shared_ptr<ReadDigitalIO>())
+    );
+    m_RequestProcessors.insert(
+        std::pair(MB_FunctionCode::ReadDiscreteInputs, m_RequestProcessors.at(MB_FunctionCode::ReadCoils))
+    );
+    m_RequestProcessors.insert(
+        std::pair(MB_FunctionCode::ReadInputRegisters, std::shared_ptr<ReadRegisters>())
+    );
 }
 
 PlcApplication::~PlcApplication()
@@ -46,7 +54,7 @@ PlcApplication::StartApplication()
         m_socket = ns3::Socket::CreateSocket(GetNode(), tid);
 
         // Bind the socket to the local address
-        ns3::InetSocketAddress local = ns3::InetSocketAddress(ns3::Ipv4Address::GetAny(), m_port);
+        ns3::InetSocketAddress local = ns3::InetSocketAddress(ns3::Ipv4Address::GetAny(), s_port);
         if (m_socket->Bind(local) == -1)
         {
             NS_FATAL_ERROR("Failed to bind socket");
@@ -89,82 +97,16 @@ PlcApplication::HandleRead(ns3::Ptr<ns3::Socket> socket)
         if (ns3::InetSocketAddress::IsMatchingType(from))
         {
             // Inbound Modbus ADUs
-            std::vector<ModbusADU> inboundAdus = ModbusADU::GetModbusADUs(packet);
+            std::vector<ModbusADU> mbRequests = ModbusADU::GetModbusADUs(packet);
 
-            for (const ModbusADU& adu : inboundAdus)
+            for (const ModbusADU& adu : mbRequests)
             {
-
-                // Copy incomming ADU head (Still need to change Lenght Field accordingly)
-                ModbusADU::CopyBase(adu, m_modbusADU);
-
-                uint8_t fc = m_modbusADU.GetFunctionCode();
+                MB_FunctionCode fc = static_cast<MB_FunctionCode>(adu.GetFunctionCode());
 
                 if (fc == MB_FunctionCode::ReadCoils)
-                {
-                    uint16_t startAddress = CombineUint8(adu.GetDataByte(0), adu.GetDataByte(1));
-                    uint16_t numCoils = CombineUint8(adu.GetDataByte(2), adu.GetDataByte(3));
-
-                    // 0 <= startAddres <= 7 (max address)
-                    // 1 <= numCoils <= 8 (max amount of coils to read)
-                    if (startAddress < 7 && 0 < numCoils && numCoils <= 8 - startAddress)
-                    {
-                        std::vector<uint8_t> data(2);
-                        data[0] = 1; // Set bit count
-                        data[1] = GetBitsInRange(startAddress, numCoils, m_out.digitalPorts);
-
-                        m_modbusADU.SetData(data);
-                        ns3::Ptr<ns3::Packet> p = m_modbusADU.ToPacket();
-                        socket->SendTo(p, 0, from);
-                    }
-
-                }
-
-                if (fc == MB_FunctionCode::ReadDiscreteInputs)
-                {
-                    uint16_t startAddress = CombineUint8(adu.GetDataByte(0), adu.GetDataByte(1));
-                    uint16_t numInputs = CombineUint8(adu.GetDataByte(2), adu.GetDataByte(3));
-
-                    // 0 <= startAddres <= 7 (max address)
-                    // 1 <= numInputs <= 8 (max amount of digital inputs to read)
-                    if (startAddress < 7 && 0 < numInputs && numInputs <= 8 - startAddress)
-                    {
-                        std::vector<uint8_t> data(2);
-                        data[0] = 1; // Set bit count
-                        data[1] = GetBitsInRange(startAddress, numInputs, m_in.digitalPorts);
-
-                        m_modbusADU.SetData(data);
-                        ns3::Ptr<ns3::Packet> p = m_modbusADU.ToPacket();
-                        socket->SendTo(p, 0, from);
-                    }
-                }
-
-                if (fc == MB_FunctionCode::ReadInputRegisters)
-                {
-                    uint16_t startAddress = CombineUint8(adu.GetDataByte(0), adu.GetDataByte(1));
-                    uint16_t numInputs = CombineUint8(adu.GetDataByte(2), adu.GetDataByte(3));
-
-                    // 0 <= startAddres <= 7 (max address)
-                    // 1 <= numCoils <= 2 (max amount of coils to read)
-                    if (startAddress < 7 && 0 < numInputs && numInputs <= 2)
-                    {
-                        std::vector<uint8_t> data(1 + 2 * numInputs);
-                        data[0] = 2 * numInputs; // Set bit count
-
-                        for (int i = 1; i < 2 * numInputs + 1; i+=2)
-                        {
-                            auto [higher, lower] = SplitUint16(m_in.analogPorts[i-1]);
-
-                            data[i] = static_cast<uint8_t>(higher);
-                            data[i + 1] = static_cast<uint8_t>(lower);
-                        }
-
-                        m_modbusADU.SetData(data);
-                        ns3::Ptr<ns3::Packet> p = m_modbusADU.ToPacket();
-                        socket->SendTo(p, 0, from);
-                    }
-                }
-
-                // Exception 01
+                    m_RequestProcessors.at(fc)->Execute(socket, adu, m_out);
+                else
+                    m_RequestProcessors.at(fc)->Execute(socket, adu, m_in);
             }
         }
     }

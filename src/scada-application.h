@@ -2,7 +2,8 @@
 
 #include "industrial-application.h"
 #include "modbus.h"
-#include "scada-state.h"
+#include "modbus-command.h"
+//#include "scada-state.h"
 #include "plc-application.h"
 
 #include "ns3/application.h"
@@ -66,13 +67,6 @@ public:
     ~ScadaApplication() override;
 
     /**
-     * Set the remote address and port
-     *
-     * \param ip remote IP address
-     * \param port remote port
-     */
-    void AddRTU(ns3::Address ip, uint16_t port);
-    /**
      * Set the remote address
      *
      * \param addr remote address
@@ -113,16 +107,13 @@ private:
     void HandleRead(ns3::Ptr<ns3::Socket> socket);
     void FreeSockets();
 
-    void SetFill(uint8_t unitId, MB_FunctionCode fc, std::vector<uint16_t> data);
-
-    ns3::Time m_interval;  //!< Packet inter-send time
-    ModbusADU m_modBusADU;  //!< Modbus Application Data Unit
-    std::vector<ns3::Ptr<ns3::Socket>> m_sockets;   //!< Socket
-    std::vector<ns3::Address> m_peerAddresses; //!< Remote peer address
-    uint16_t m_peerPort;                  //!< Remote peer port
-    bool m_started; //!< Whether the app has already started
-    uint16_t m_transactionId; //!< TransactionId for the Modbus ADU
-    std::map<ns3::Address, ScadaReadings> m_readConfigs;
+    ns3::Time m_interval;                           //!< Packet inter-send time
+    std::vector<ns3::Ptr<ns3::Socket>> m_sockets;   //!< Socket per RTU
+    std::vector<ns3::Address> m_peerAddresses;      //!< Address per RTU
+    static constexpr uint16_t s_PeerPort = 502;     //!< Remote peer port
+    bool m_started;                                 //!< Whether the app has already started
+    uint16_t m_transactionId;                       //!< TransactionId for the Modbus ADU
+    std::vector<std::map<MB_FunctionCode, Command>> m_Commands; //!< Commands to execute for each RTU
     std::map<std::string, Var> m_vars;
 
     std::function<void(std::map<std::string, Var>&)> m_loop;

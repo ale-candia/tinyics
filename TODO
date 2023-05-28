@@ -10,7 +10,13 @@
 
 - Add Industrial-Process abstract class to the python bindings. (this has a special trick, see: https://medium.com/practical-coding/three-advanced-pybind11-features-for-wrapping-c-code-into-python-6dbcac169b93)
 
+- Expose operators for custom Var class for easier usage (take into consideration the VarType)
+
+- Make address vector in scada efficient for find and inserts
+
 ### LOWER PRIORITY ###
+
+- Add namespace modbus
 
 - Is m_Interval needed in the SCADA? We could receive the data the PLC and send a new request right away.
 
@@ -33,4 +39,9 @@
 - What happens a certain amount of data in the packet is not sended, can this happen?
 
 - Timeout for read packet (can timeouts happen??)
+
+### MQTT ###
+
+- https://sourceforge.net/p/mqttforns3/wiki/Instructions/
+
 

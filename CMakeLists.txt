@@ -33,8 +33,9 @@ set(source_files
     src/modbus.cc
     src/plc-application.cc
     src/scada-application.cc
-    src/scada-state.cc
     src/utils.cc
+    src/modbus-command.cc
+    src/modbus-request.cc
 )
 
 set(lib_name "icssim")

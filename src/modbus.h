@@ -17,7 +17,7 @@ enum MB_FunctionCode
     //ReadHoldingRegisters = 3, won't be supported yet
     ReadInputRegisters = 4,
     //WriteSingleCoil = 5, won't be supported yet
-    //WriteSingleRegister = 6, won't be supported yet
+    //WriteSingleHoldingRegister = 6, won't be supported yet
 };
 
 /**
