@@ -1,32 +1,28 @@
 ### CURRENTLY WORKING ON ###
 
-- Implement the SCADA and PLC loops (this means custom logic). Here for the SCADA we should have some sort of UpdateState that will eventually be defined by the user and internally we'll use a DoUpdateState which will be a wrapper that will call UpdateState and then SendAll to send the Modbus read command to all RTUs. The states themselves should be modified in the HandleRead function whenever the packet arrives.
+- Implement PLC and Industrial Process loops from python
 
-- SCADA still needs to parse incoming Modbus Packets and update its state with that data
-
-- Improve ScadaReadings to be more scalable
-
-- Refactor parsing of the Modbus ADUs to use the Command Pattern
+- try out different simulation scenarios and leave them as separate examples
 
 - Add Industrial-Process abstract class to the python bindings. (this has a special trick, see: https://medium.com/practical-coding/three-advanced-pybind11-features-for-wrapping-c-code-into-python-6dbcac169b93)
 
-- Expose operators for custom Var class for easier usage (take into consideration the VarType)
-
 - Make address vector in scada efficient for find and inserts
+
+- Review, m_interval both for SCADA and PLC
+
+- PENDING RESPONSE FUNCTIONALITY
+
+- Try out many to many relationships (2 or more SCADAS vs 2 or more PLCs)
 
 ### LOWER PRIORITY ###
 
+- Expose operators for custom Var class for easier usage (take into consideration the VarType)
+
 - Add namespace modbus
-
-- Is m_Interval needed in the SCADA? We could receive the data the PLC and send a new request right away.
-
-- Rename scada-state to scada-readings?.
 
 - Find a way of setting a global simulation time, i.e. a time at which all simulations end.
 
 - Rename SCADA to HMI?
-
-- Improve reading coils, currently only the plc_in.digitalPorts are being sent.
 
 - Update rate of process should be defined by the process being simulated. Since faster changing process may need smaller update time.
 

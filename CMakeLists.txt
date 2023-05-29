@@ -36,6 +36,7 @@ set(source_files
     src/utils.cc
     src/modbus-command.cc
     src/modbus-request.cc
+    src/modbus-response.cc
 )
 
 set(lib_name "icssim")

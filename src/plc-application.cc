@@ -19,15 +19,18 @@ PlcApplication::GetTypeId()
 PlcApplication::PlcApplication(const char* name) : IndustrialApplication(name)
 {
     // Setup Modbus Responses (Can also be created dynamically/on demand if needed)
-    m_RequestProcessors.insert(
-        std::pair(MB_FunctionCode::ReadCoils, std::shared_ptr<ReadDigitalIO>())
-    );
-    m_RequestProcessors.insert(
-        std::pair(MB_FunctionCode::ReadDiscreteInputs, m_RequestProcessors.at(MB_FunctionCode::ReadCoils))
-    );
-    m_RequestProcessors.insert(
-        std::pair(MB_FunctionCode::ReadInputRegisters, std::shared_ptr<ReadRegisters>())
-    );
+    m_RequestProcessors.insert(std::pair(
+        MB_FunctionCode::ReadCoils,
+        std::make_shared<DigitalReadRequest>(DigitalReadRequest())
+    ));
+    m_RequestProcessors.insert(std::pair(
+        MB_FunctionCode::ReadDiscreteInputs,
+        m_RequestProcessors.at(MB_FunctionCode::ReadCoils)
+    ));
+    m_RequestProcessors.insert(std::pair(
+        MB_FunctionCode::ReadInputRegisters,
+        std::make_shared<ReadRegistersRequest>(ReadRegistersRequest())
+    ));
 }
 
 PlcApplication::~PlcApplication()
@@ -96,17 +99,17 @@ PlcApplication::HandleRead(ns3::Ptr<ns3::Socket> socket)
     {
         if (ns3::InetSocketAddress::IsMatchingType(from))
         {
-            // Inbound Modbus ADUs
-            std::vector<ModbusADU> mbRequests = ModbusADU::GetModbusADUs(packet);
-
-            for (const ModbusADU& adu : mbRequests)
+            for (const ModbusADU& adu : ModbusADU::GetModbusADUs(packet))
             {
-                MB_FunctionCode fc = static_cast<MB_FunctionCode>(adu.GetFunctionCode());
+                MB_FunctionCode fc = adu.GetFunctionCode();
 
                 if (fc == MB_FunctionCode::ReadCoils)
-                    m_RequestProcessors.at(fc)->Execute(socket, adu, m_out);
+                {
+                    if (m_RequestProcessors.at(fc))
+                        m_RequestProcessors.at(fc)->Execute(socket, from, adu, m_out);
+                }
                 else
-                    m_RequestProcessors.at(fc)->Execute(socket, adu, m_in);
+                    m_RequestProcessors.at(fc)->Execute(socket, from, adu, m_in);
             }
         }
     }

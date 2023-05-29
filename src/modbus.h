@@ -51,7 +51,7 @@ public:
     uint16_t GetTransactionID() const;
     uint16_t GetLengthField() const;
     uint8_t GetUnitID() const;
-    uint8_t GetFunctionCode() const;
+    MB_FunctionCode GetFunctionCode() const;
     uint8_t GetDataByte(uint8_t idx) const;
     uint32_t GetBufferSize() const;
 

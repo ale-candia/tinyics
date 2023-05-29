@@ -30,6 +30,12 @@ Command::SetByteCount(uint8_t pos)
     m_ByteCount = end - start + 1;
 }
 
+uint16_t
+Command::GetStart() const
+{
+    return m_Start;
+}
+
 void
 Command::Execute(ns3::Ptr<ns3::Socket> socket, uint16_t tid, uint8_t uid) const
 {

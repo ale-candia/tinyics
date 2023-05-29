@@ -2,15 +2,44 @@
 
 from build.bindings.industrial_networks import *
 
+PLOT_GRAPHS = False
+CAPTURE_PACKETS = False
+
+pump = []
+valve = []
+level1 = []
+level2 = []
+t = []
+
+def gather_values(vars):
+    pump.append(vars['Pump'].get_value())
+    valve.append(vars['Valve'].get_value())
+    level1.append(vars['L1'].get_value())
+    level2.append(vars['L2'].get_value())
+
+    t.append(get_current_time())
+
+def plot_vars():
+    import matplotlib.pyplot as plt
+
+    fig, (ax0, ax1) = plt.subplots(nrows=1, ncols=2, sharex=True)
+
+    ax0.set_title('Digital Output')
+    ax0.errorbar(t, pump)
+    ax0.errorbar(t, valve)
+
+    ax1.set_title('Sensors (Digital Inputs)')
+    ax1.errorbar(t, level1)
+    ax1.errorbar(t, level2)
+
+    fig.suptitle('Water Tank Readings')
+    plt.show()
+
 def scada_loop(vars):
-    x0 = vars['X0'].get_value()
-    x1 = vars['X1'].get_value()
+    if PLOT_GRAPHS:
+        gather_values(vars)
 
-    return {'X0': x0 + 1, 'X1': x1 + 2}
-
-def say_hello():
-    print("Hello World from python")
-
+    return {}
 
 # Define the automation stations (PLC and SCADA systems)
 plc1 = Plc("plc1")
@@ -33,11 +62,19 @@ networkBuilder.build_network()
 scada.add_rtu(plc1.get_address())
 scada.add_rtu(plc2.get_address())
 
-scada.add_variable(plc1, "X0", VarType.Coil, 0)
-scada.add_variable(plc1, "X1", VarType.Coil, 1)
+scada.add_variable(plc1, "Pump", VarType.Coil, 0)
+scada.add_variable(plc1, "Valve", VarType.Coil, 1)
+scada.add_variable(plc1, "L1", VarType.DigitalInput, 0)
+scada.add_variable(plc1, "L2", VarType.DigitalInput, 1)
+scada.add_variable(plc2, "A1", VarType.InputRegister, 1)
 
-networkBuilder.enable_pcap("sim")
+if CAPTURE_PACKETS:
+    networkBuilder.enable_pcap("sim")
 
 # Run the simulation
 run_simulation()
+
+if PLOT_GRAPHS:
+    plot_vars()
+
 

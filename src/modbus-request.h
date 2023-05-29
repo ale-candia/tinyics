@@ -14,17 +14,17 @@ public:
     /**
      * Processes and sends the response using the provided socket
      */
-    virtual void Execute(Socket sock, const ModbusADU& adu, const PlcState& state) const = 0;
+    virtual void Execute(Socket sock, const ns3::Address& from, const ModbusADU& adu, const PlcState& state) const = 0;
 };
 
-class ReadDigitalIO : public RequestProcessor
+class DigitalReadRequest : public RequestProcessor
 {
 public:
-    void Execute(Socket sock, const ModbusADU& adu, const PlcState& state) const override;
+    void Execute(Socket sock, const ns3::Address& from, const ModbusADU& adu, const PlcState& state) const override;
 };
 
-class ReadRegisters : public RequestProcessor
+class ReadRegistersRequest : public RequestProcessor
 {
-    void Execute(Socket sock, const ModbusADU& adu, const PlcState& state) const override;
+    void Execute(Socket sock, const ns3::Address& from, const ModbusADU& adu, const PlcState& state) const override;
 };
 

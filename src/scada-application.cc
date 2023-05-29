@@ -1,20 +1,12 @@
-#include "ns3/inet-socket-address.h"
-#include "ns3/ipv4-address.h"
-#include "ns3/nstime.h"
-#include "ns3/packet.h"
-#include "ns3/simulator.h"
-#include "ns3/socket-factory.h"
-#include "ns3/socket.h"
-#include "ns3/uinteger.h"
-
 #include "scada-application.h"
 
 ns3::TypeId
 ScadaApplication::GetTypeId()
 {
     static ns3::TypeId tid = ns3::TypeId("ScadaApplication")
-                            .SetParent<Application>()
-                            .SetGroupName("Applications");
+        .SetParent<Application>()
+        .SetGroupName("Applications");
+
     return tid;
 }
 
@@ -22,6 +14,10 @@ ScadaApplication::ScadaApplication(const char* name) : IndustrialApplication(nam
 {
     m_started = false;
     m_interval = ns3::Seconds(1.0);
+
+    m_ResponseProcessors.insert(std::pair(MB_FunctionCode::ReadCoils, std::make_shared<DigitalReadResponse>()));                                            
+    m_ResponseProcessors.insert(std::pair(MB_FunctionCode::ReadDiscreteInputs, m_ResponseProcessors.at(MB_FunctionCode::ReadCoils)));
+    m_ResponseProcessors.insert(std::pair(MB_FunctionCode::ReadInputRegisters, std::make_shared<RegisterReadResponse>()));
 }
 
 ScadaApplication::~ScadaApplication()
@@ -43,6 +39,7 @@ ScadaApplication::AddRTU(ns3::Ipv4Address addr)
 {
     m_peerAddresses.push_back(addr);
     m_Commands.push_back(std::map<MB_FunctionCode, Command>());
+    m_varsPerRtu.push_back(std::set<std::string>());
 }
 
 void
@@ -131,50 +128,33 @@ ScadaApplication::SendAll()
 void
 ScadaApplication::HandleRead(ns3::Ptr<ns3::Socket> socket)
 {
-    /*
     ns3::Ptr<ns3::Packet> packet;
     ns3::Address from;
     while ((packet = socket->RecvFrom(from)))
     {
         if (ns3::InetSocketAddress::IsMatchingType(from))
         {
-            // Inbound Modbus ADU
-            std::vector<ModbusADU> inboundADUs = ModbusADU::GetModbusADUs(packet);
-
-            for(const ModbusADU& adu : inboundADUs)
+            for(const ModbusADU& adu : ModbusADU::GetModbusADUs(packet))
             {
-                try
+                auto type = Var::IntoVarType(adu.GetFunctionCode());
+                auto idx = adu.GetUnitID() - 1;
+
+                std::vector<Var*> vars;
+
+                // No need to use variables used with different function codes
+                for (const auto& varName : m_varsPerRtu[idx])
                 {
-                    // Use the unit identifier to retrieve address, since the from
-                    // address has lost the Address format
-                    ScadaReadings& readconfigs = m_readConfigs.at(m_peerAddresses[adu.GetUnitID() - 1]);
-
-                    // process packet
-                    uint8_t fc = adu.GetFunctionCode();
-
-                    if (fc == MB_FunctionCode::ReadCoils)
-                    {
-                        readconfigs.m_pendingCoils = false;
-                    }
-
-                    else if (fc == MB_FunctionCode::ReadInputRegisters)
-                    {
-                        readconfigs.m_pendingInReg = false;
-                    }
-
-                    else if (fc == MB_FunctionCode::ReadDiscreteInputs)
-                    {
-                        readconfigs.m_pendingDiscreteIn = false;
-                    }
+                    Var *var = &m_vars.at(varName);
+                    if (type == var->GetType())
+                        vars.push_back(var);
                 }
-                catch (std::out_of_range exception)
-                {
-                    continue;
-                }
+
+                uint16_t start = m_Commands[idx].at(adu.GetFunctionCode()).GetStart();
+
+                m_ResponseProcessors.at(adu.GetFunctionCode())->Execute(adu, vars, start);
             }
         }
     }
-    */
 
 }
 
@@ -203,44 +183,25 @@ ScadaApplication::AddVariable(
     VarType type,
     uint8_t pos
 ){
-    // Add the variable
-    m_vars.insert(std::pair<std::string, Var>(name, Var(type, pos)));
+    // Map VarType to the corresponding modbus function code
+    MB_FunctionCode fc = Var::IntoFunctionCode(type);
 
-    const ns3::Address& plcAddr = plc -> GetAddress();
+    int idx = GetRTUIndex(plc->GetAddress());
 
-    // Cannot add a Command to an unregistered PLC (Here we could add it internally)
-    auto it = std::find(m_peerAddresses.begin(), m_peerAddresses.end(), plcAddr);
-    if (it == m_peerAddresses.end())
-        NS_FATAL_ERROR("RTU '" << plc->GetName() << "' is not register in '" << GetName() << '\'');
+    /* Add the Variable */
 
-    int idx = it - m_peerAddresses.begin();
+    m_varsPerRtu[idx].insert(name);
+
+    m_vars.insert(std::pair(name, Var(type, pos)));
+
+    /* Build a command to send the appropriate request */
 
     auto& commandMap = m_Commands[idx];
 
-    // Map VarType to the corresponding modbus function code
-    MB_FunctionCode fc;
-    switch (type)
-    {
-        case VarType::Coil:
-            fc = MB_FunctionCode::ReadCoils;
-            break;
-        case VarType::DigitalInput:
-            fc = MB_FunctionCode::ReadDiscreteInputs;
-            break;
-        case VarType::InputRegister:
-            fc = MB_FunctionCode::ReadInputRegisters;
-            break;
-        case VarType::LocalVariable:
-            return; // If its a local variable we don't need to add a command
-    }
-
-    // If there isn't a command for the Function Code Add it
+    // If there isn't a command for the Function Code add it
     if (commandMap.find(fc) == commandMap.end())
     {
-        commandMap.insert(std::pair<MB_FunctionCode, Command>(
-            fc,
-            Command(fc, 0, 0)
-        ));
+        commandMap.insert(std::pair(fc, Command(fc, 0, 0)));
     }
 
     commandMap.at(fc).SetByteCount(pos);
@@ -257,6 +218,16 @@ ScadaApplication::AddVariable(
     const std::string& name,
     uint16_t value = 0
 ){
-    m_vars.insert(std::pair<std::string, Var>(name, Var(VarType::LocalVariable, 0, value)));
+    m_vars.insert(std::pair(name, Var(VarType::LocalVariable, 0, value)));
+}
+
+int
+ScadaApplication::GetRTUIndex(const ns3::Address& rtuAddr)
+{
+    auto it = std::find(m_peerAddresses.begin(), m_peerAddresses.end(), rtuAddr);
+    if (it == m_peerAddresses.end())
+        NS_FATAL_ERROR("No RTU with address: '" << rtuAddr << "' in SCADA '" << GetName() << '\'');
+
+    return it - m_peerAddresses.begin();
 }
 

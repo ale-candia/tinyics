@@ -196,10 +196,10 @@ ModbusADU::GetUnitID() const
     return m_Bytes[UNIT_ID_POS];
 }
 
-uint8_t
+MB_FunctionCode
 ModbusADU::GetFunctionCode() const
 {
-    return m_Bytes[FUNCTION_CODE_POS];
+    return static_cast<MB_FunctionCode>(m_Bytes[FUNCTION_CODE_POS]);
 }
 
 uint32_t

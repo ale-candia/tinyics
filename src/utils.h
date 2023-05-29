@@ -14,11 +14,11 @@ std::tuple<uint8_t, uint8_t> SplitUint16(uint16_t value);
 uint16_t CombineUint8(uint8_t higher, uint8_t lower);
 
 /*
- * Get the bits in a specific range
+ * Get the bits in a specific range (using Big-Endian byte order)
  *
  * Example:
  *  input: start 0 - numOfBits 5 - bits 0110 1011 (uint8_t 107)
  *  returns: 0110 1000 (uint8_t 104)
  */
-uint8_t GetBitsInRange(uint16_t start, uint16_t numOfBits, uint8_t bits);
+uint8_t GetBitsInRangeBE(uint16_t start, uint16_t numOfBits, uint8_t bits);
 

@@ -16,6 +16,12 @@ RunSimulationWrapper()
 }
 
 
+double
+GetCurrentTime()
+{
+    return ns3::Simulator::Now().ToDouble(ns3::Time::S);
+}
+
 // This needs to be switched to receive an Industrial application instead
 // so that PLC also supports it
 void
@@ -125,5 +131,7 @@ PYBIND11_MODULE(industrial_networks, m) {
     m.def("run_simulation", &RunSimulationWrapper);
 
     m.def("set_loop", &SetApplicationLoopWrapper);
+
+    m.def("get_current_time", &GetCurrentTime);
 }
 

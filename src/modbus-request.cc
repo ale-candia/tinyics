@@ -1,7 +1,11 @@
 #include "modbus-request.h"
 
 void
-ReadDigitalIO::Execute(Socket sock, const ModbusADU& adu, const PlcState& state) const
+DigitalReadRequest::Execute(
+    Socket sock,
+    const ns3::Address& from,
+    const ModbusADU& adu,
+    const PlcState& state) const
 {
     uint16_t start = CombineUint8(adu.GetDataByte(0), adu.GetDataByte(1));
     uint16_t num = CombineUint8(adu.GetDataByte(2), adu.GetDataByte(3));
@@ -12,20 +16,23 @@ ReadDigitalIO::Execute(Socket sock, const ModbusADU& adu, const PlcState& state)
     {
         std::vector<uint8_t> data(2);
         data[0] = 1; // Set bit count
-        data[1] = GetBitsInRange(start, num, state.digitalPorts);
+        data[1] = GetBitsInRangeBE(start, num, state.digitalPorts);
 
         ModbusADU response;
         ModbusADU::CopyBase(adu, response);
         response.SetData(data);
 
         ns3::Ptr<ns3::Packet> p = response.ToPacket();
-        //sock->SendTo(p, 0, from);
-        sock->Send(p);
+        sock->SendTo(p, 0, from);
     }
 }
 
 void
-ReadRegisters::Execute(Socket sock, const ModbusADU& adu, const PlcState& state) const
+ReadRegistersRequest::Execute(
+    Socket sock,
+    const ns3::Address& from,
+    const ModbusADU& adu,
+    const PlcState& state) const
 {
     uint16_t start = CombineUint8(adu.GetDataByte(0), adu.GetDataByte(1));
     uint16_t num = CombineUint8(adu.GetDataByte(2), adu.GetDataByte(3));
@@ -56,8 +63,7 @@ ReadRegisters::Execute(Socket sock, const ModbusADU& adu, const PlcState& state)
         response.SetData(data);
 
         ns3::Ptr<ns3::Packet> p = response.ToPacket();
-        //sock->SendTo(p, 0, from);
-        sock->Send(p);
+        sock->SendTo(p, 0, from);
     }
 }
 

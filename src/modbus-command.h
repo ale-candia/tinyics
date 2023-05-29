@@ -9,6 +9,8 @@ public:
 
     void SetByteCount(uint8_t pos);
 
+    uint16_t GetStart() const;
+
     void Execute(ns3::Ptr<ns3::Socket> socket, uint16_t tid, uint8_t uid) const;
 
 private:

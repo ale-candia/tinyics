@@ -1,51 +1,18 @@
 #pragma once
 
 #include "industrial-application.h"
-#include "modbus.h"
 #include "modbus-command.h"
-//#include "scada-state.h"
+#include "modbus-response.h"
 #include "plc-application.h"
 
 #include "ns3/application.h"
-#include "ns3/event-id.h"
 #include "ns3/ipv4-address.h"
-#include "ns3/ptr.h"
-#include "ns3/traced-callback.h"
 
 namespace ns3
 {
     class Socket;
     class Packet;
 }
-
-enum VarType
-{
-    Coil,
-    DigitalInput,
-    InputRegister,
-    LocalVariable,
-};
-
-class Var
-{
-public:
-    Var(VarType type, uint8_t pos)
-        : m_type(type), m_pos(pos), m_value(0) {}
-
-    Var(VarType type, uint8_t pos, uint16_t value)
-        : m_type(type), m_pos(pos), m_value(value) {}
-
-    VarType GetType() const { return m_type; }
-    
-    uint16_t GetValue() const { return m_value; }
-
-    void SetValue(uint16_t val) { m_value = val; }
-    
-private:
-    VarType m_type;
-    uint16_t m_value;
-    uint8_t m_pos;
-};
 
 /**
  * A ScadaApplication (acts as a Modbus TCP client)
@@ -92,6 +59,13 @@ private:
      */
     void ScheduleUpdate(ns3::Time dt);
 
+    /**
+     * Get index for the RTU in the Address vector. Crashes if not found
+     *
+     * \returns int index of the RTU
+     */
+    int GetRTUIndex(const ns3::Address& rtuAddr);
+
     /// Send a packet to all connected devices
     void SendAll();
 
@@ -115,6 +89,9 @@ private:
     uint16_t m_transactionId;                       //!< TransactionId for the Modbus ADU
     std::vector<std::map<MB_FunctionCode, Command>> m_Commands; //!< Commands to execute for each RTU
     std::map<std::string, Var> m_vars;
+    std::vector<std::set<std::string>> m_varsPerRtu;
+
+    std::map<MB_FunctionCode, std::shared_ptr<ResponseProcessor>> m_ResponseProcessors;
 
     std::function<void(std::map<std::string, Var>&)> m_loop;
 };

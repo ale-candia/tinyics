@@ -41,6 +41,9 @@ main(int argc, char* argv[])
 
     scada->AddVariable(plc1, "X0", VarType::Coil, 0);
     scada->AddVariable(plc1, "X1", VarType::Coil, 1);
+    scada->AddVariable(plc1, "Q0", VarType::DigitalInput, 1);
+
+    scada->AddVariable(plc2, "A0", VarType::InputRegister, 1);
 
     networkBuilder.EnablePcap("sim");
 

@@ -14,7 +14,7 @@ CombineUint8(uint8_t higher, uint8_t lower) {
 }
 
 uint8_t
-GetBitsInRange(uint16_t start, uint16_t numOfBits, uint8_t bits)
+GetBitsInRangeBE(uint16_t start, uint16_t numOfBits, uint8_t bits)
 {
     uint8_t mask = (1 << numOfBits) - 1;
 
