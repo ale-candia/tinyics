@@ -25,7 +25,7 @@ DigitalReadResponse::Execute(const ModbusADU& adu, const std::vector<Var*>& vars
         // to 0
         uint8_t value = (GetBitsInRangeBE(bit, 1, adu.GetDataByte(byte)) > 0) ? 1 : 0;
 
-        var->SetValue(value);
+        var->SetValueUnchanged(value);
     }
 }
 
@@ -55,8 +55,8 @@ RegisterReadResponse::Execute(const ModbusADU& adu, const std::vector<Var*>& var
         // to 0
         uint16_t value = CombineUint8(high, low);
 
-        var->SetValue(value);
-}
+        var->SetValueUnchanged(value);
+    }
 
 }
 

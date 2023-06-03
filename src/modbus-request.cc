@@ -5,7 +5,7 @@ DigitalReadRequest::Execute(
     Socket sock,
     const ns3::Address& from,
     const ModbusADU& adu,
-    const PlcState& state) const
+    PlcState& state) const
 {
     uint16_t start = CombineUint8(adu.GetDataByte(0), adu.GetDataByte(1));
     uint16_t num = CombineUint8(adu.GetDataByte(2), adu.GetDataByte(3));
@@ -32,7 +32,7 @@ ReadRegistersRequest::Execute(
     Socket sock,
     const ns3::Address& from,
     const ModbusADU& adu,
-    const PlcState& state) const
+    PlcState& state) const
 {
     uint16_t start = CombineUint8(adu.GetDataByte(0), adu.GetDataByte(1));
     uint16_t num = CombineUint8(adu.GetDataByte(2), adu.GetDataByte(3));
@@ -65,5 +65,19 @@ ReadRegistersRequest::Execute(
         ns3::Ptr<ns3::Packet> p = response.ToPacket();
         sock->SendTo(p, 0, from);
     }
+}
+
+void
+WriteCoilRequest::Execute(
+    Socket sock,
+    const ns3::Address& from,
+    const ModbusADU& adu,
+    PlcState& state) const
+{
+    uint16_t pos = CombineUint8(adu.GetDataByte(0), adu.GetDataByte(1));
+    uint16_t value = CombineUint8(adu.GetDataByte(2), adu.GetDataByte(3));
+
+    ns3::Ptr<ns3::Packet> p = adu.ToPacket();
+    sock->SendTo(p, 0, from);
 }
 

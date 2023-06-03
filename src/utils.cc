@@ -24,3 +24,17 @@ GetBitsInRangeBE(uint16_t start, uint16_t numOfBits, uint8_t bits)
     return bits;
 }
 
+void
+SetBitBE(uint8_t& byte, uint8_t pos, bool value)
+{
+    if (pos < 8)
+    {
+        uint8_t mask = 1 << pos;
+        if (value) {
+            byte |= mask;  // Set bit to 1
+        } else {
+            byte &= ~mask; // Set bit to 0
+        }
+    }
+}
+

@@ -84,15 +84,14 @@ private:
     ns3::Time m_interval;                           //!< Packet inter-send time
     std::vector<ns3::Ptr<ns3::Socket>> m_sockets;   //!< Socket per RTU
     std::vector<ns3::Address> m_peerAddresses;      //!< Address per RTU
-    static constexpr uint16_t s_PeerPort = 502;     //!< Remote peer port
     bool m_started;                                 //!< Whether the app has already started
     uint16_t m_transactionId;                       //!< TransactionId for the Modbus ADU
-    std::vector<std::map<MB_FunctionCode, Command>> m_Commands; //!< Commands to execute for each RTU
+    std::vector<std::map<MB_FunctionCode, ReadCommand>> m_ReadCommands; //!< Commands to execute for each RTU
     std::map<std::string, Var> m_vars;
-    std::vector<std::set<std::string>> m_varsPerRtu;
-
     std::map<MB_FunctionCode, std::shared_ptr<ResponseProcessor>> m_ResponseProcessors;
-
+    std::vector<WriteCommand> m_WriteCommands;
     std::function<void(std::map<std::string, Var>&)> m_loop;
+
+    static constexpr uint16_t s_PeerPort = 502;     //!< Remote peer port
 };
 

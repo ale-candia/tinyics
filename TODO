@@ -14,6 +14,8 @@
 
 - Try out many to many relationships (2 or more SCADAS vs 2 or more PLCs)
 
+- Make Request Processors Static (no need to create new instances for each plc)
+
 ### LOWER PRIORITY ###
 
 - Expose operators for custom Var class for easier usage (take into consideration the VarType)

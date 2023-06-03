@@ -31,6 +31,10 @@ PlcApplication::PlcApplication(const char* name) : IndustrialApplication(name)
         MB_FunctionCode::ReadInputRegisters,
         std::make_shared<ReadRegistersRequest>(ReadRegistersRequest())
     ));
+    m_RequestProcessors.insert(std::pair(
+        MB_FunctionCode::WriteSingleCoil,
+        std::make_shared<WriteCoilRequest>(WriteCoilRequest())
+    ));
 }
 
 PlcApplication::~PlcApplication()
@@ -103,7 +107,7 @@ PlcApplication::HandleRead(ns3::Ptr<ns3::Socket> socket)
             {
                 MB_FunctionCode fc = adu.GetFunctionCode();
 
-                if (fc == MB_FunctionCode::ReadCoils)
+                if (fc == MB_FunctionCode::ReadCoils || fc == MB_FunctionCode::WriteSingleCoil)
                 {
                     if (m_RequestProcessors.at(fc))
                         m_RequestProcessors.at(fc)->Execute(socket, from, adu, m_out);

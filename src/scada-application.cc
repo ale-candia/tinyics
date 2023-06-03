@@ -38,8 +38,7 @@ void
 ScadaApplication::AddRTU(ns3::Ipv4Address addr)
 {
     m_peerAddresses.push_back(addr);
-    m_Commands.push_back(std::map<MB_FunctionCode, Command>());
-    m_varsPerRtu.push_back(std::set<std::string>());
+    m_ReadCommands.push_back(std::map<MB_FunctionCode, ReadCommand>());
 }
 
 void
@@ -63,8 +62,8 @@ ScadaApplication::StartApplication()
     for (const ns3::Address& address : m_peerAddresses)
     {
         // Create a socket
-        ns3::TypeId tid = ns3::TypeId::LookupByName("ns3::TcpSocketFactory");
-        ns3::Ptr<ns3::Socket> socket = ns3::Socket::CreateSocket(GetNode(), tid);
+        auto tid = ns3::TypeId::LookupByName("ns3::TcpSocketFactory");
+        auto socket = ns3::Socket::CreateSocket(GetNode(), tid);
 
         if (ns3::Ipv4Address::IsMatchingType(address) == true)
         {
@@ -107,13 +106,12 @@ void ScadaApplication::ScheduleUpdate(ns3::Time dt)
 void
 ScadaApplication::SendAll()
 {
+    std::vector<int> sock;
     for (int i = 0; i < m_sockets.size(); i++)
     {
-        // Once the API is implemented
-        ns3::Ptr<ns3::Socket> socket = m_sockets[i];
-        const ns3::Address& address = m_peerAddresses[i];
+        auto socket = m_sockets[i];
 
-        for (const auto& command : m_Commands[i])
+        for (const auto& command : m_ReadCommands[i])
         {
             command.second.Execute(socket, m_transactionId, i+1);
             m_transactionId++;
@@ -136,22 +134,35 @@ ScadaApplication::HandleRead(ns3::Ptr<ns3::Socket> socket)
         {
             for(const ModbusADU& adu : ModbusADU::GetModbusADUs(packet))
             {
+                if (adu.GetFunctionCode() == MB_FunctionCode::WriteSingleCoil)
+                    continue;
+
                 auto type = Var::IntoVarType(adu.GetFunctionCode());
                 auto idx = adu.GetUnitID() - 1;
 
                 std::vector<Var*> vars;
 
                 // No need to use variables used with different function codes
-                for (const auto& varName : m_varsPerRtu[idx])
+                for (auto& var : m_vars)
                 {
-                    Var *var = &m_vars.at(varName);
-                    if (type == var->GetType())
-                        vars.push_back(var);
+                    if (type == var.second.GetType())
+                        vars.push_back(&var.second);
                 }
 
-                uint16_t start = m_Commands[idx].at(adu.GetFunctionCode()).GetStart();
+                uint16_t start = m_ReadCommands[idx].at(adu.GetFunctionCode()).GetStart();
 
                 m_ResponseProcessors.at(adu.GetFunctionCode())->Execute(adu, vars, start);
+            }
+
+            // Execute writes
+            if (m_WriteCommands.size() > 0)
+            {
+                for (const auto& command : m_WriteCommands)
+                {
+                    command.Execute(socket, m_transactionId);
+                    m_transactionId++;
+                }
+                m_WriteCommands.clear();
             }
         }
     }
@@ -163,8 +174,22 @@ ScadaApplication::DoUpdate()
 {
     // Update all statuses
     if (m_loop)
-    {
         m_loop(m_vars);
+
+    // Create write commands if needed
+    // TODO: WE NEED TO MAKE SURE INPUT VARIABLES (MEASUREMENTS) ARE NOT BEING CHANGED
+    for (auto& var : m_vars)
+    {
+        if (var.second.Changed() && var.second.GetType() == VarType::Coil)
+        {
+            m_WriteCommands.emplace_back(WriteCommand(
+                MB_FunctionCode::WriteSingleCoil,
+                var.second.GetPosition(),
+                var.second.GetValue(),
+                var.second.GetUID()
+            ));
+        }
+        var.second.SetChanged(false);
     }
 
     // Send Data
@@ -184,27 +209,30 @@ ScadaApplication::AddVariable(
     uint8_t pos
 ){
     // Map VarType to the corresponding modbus function code
-    MB_FunctionCode fc = Var::IntoFunctionCode(type);
+    MB_FunctionCode fc = Var::IntoFCRead(type);
 
     int idx = GetRTUIndex(plc->GetAddress());
 
-    /* Add the Variable */
+    // If the variable is already registered then, ignore this one
+    if (m_vars.find(name) != m_vars.end())
+    {
+        std::clog << "Variable " << name << " already defined, ignoring all future instances\n";
+        return;
+    }
 
-    m_varsPerRtu[idx].insert(name);
-
-    m_vars.insert(std::pair(name, Var(type, pos)));
+    m_vars.insert(std::pair(name, Var(type, pos, idx+1)));
 
     /* Build a command to send the appropriate request */
 
-    auto& commandMap = m_Commands[idx];
+    auto& commandMap = m_ReadCommands[idx];
 
     // If there isn't a command for the Function Code add it
     if (commandMap.find(fc) == commandMap.end())
     {
-        commandMap.insert(std::pair(fc, Command(fc, 0, 0)));
+        commandMap.insert(std::pair(fc, ReadCommand(fc, 0, 0)));
     }
 
-    commandMap.at(fc).SetByteCount(pos);
+    commandMap.at(fc).SetReadCount(pos);
 }
 
 void
@@ -218,7 +246,7 @@ ScadaApplication::AddVariable(
     const std::string& name,
     uint16_t value = 0
 ){
-    m_vars.insert(std::pair(name, Var(VarType::LocalVariable, 0, value)));
+    m_vars.insert(std::pair(name, Var(VarType::LocalVariable, value)));
 }
 
 int

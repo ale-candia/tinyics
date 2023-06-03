@@ -3,7 +3,7 @@
 from build.bindings.industrial_networks import *
 
 PLOT_GRAPHS = False
-CAPTURE_PACKETS = False
+CAPTURE_PACKETS = True
 
 pump = []
 valve = []
@@ -36,10 +36,20 @@ def plot_vars():
     plt.show()
 
 def scada_loop(vars):
+    output = {}
+    a1 = vars["A1"].get_value()
+    test_value = vars["TestVar"].get_value()
+
+    if a1 % 3 == 0:
+        # Invert the value of TestVar each 3 iterations
+        output["TestVar"] = not (True if test_value > 0 else False)
+
+    output["A1"] = a1 + 1
+
     if PLOT_GRAPHS:
         gather_values(vars)
 
-    return {}
+    return output
 
 # Define the automation stations (PLC and SCADA systems)
 plc1 = Plc("plc1")
@@ -62,11 +72,11 @@ networkBuilder.build_network()
 scada.add_rtu(plc1.get_address())
 scada.add_rtu(plc2.get_address())
 
-scada.add_variable(plc1, "Pump", VarType.Coil, 0)
-scada.add_variable(plc1, "Valve", VarType.Coil, 1)
-scada.add_variable(plc1, "L1", VarType.DigitalInput, 0)
-scada.add_variable(plc1, "L2", VarType.DigitalInput, 1)
-scada.add_variable(plc2, "A1", VarType.InputRegister, 1)
+#scada.add_variable(plc1, "Pump", VarType.Coil, 0)
+#scada.add_variable(plc1, "Valve", VarType.Coil, 1)
+
+scada.add_variable(plc2, "TestVar", VarType.Coil, 0)
+scada.add_variable("A1", 0)
 
 if CAPTURE_PACKETS:
     networkBuilder.enable_pcap("sim")
