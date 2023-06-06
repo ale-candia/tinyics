@@ -8,6 +8,30 @@
 
 namespace py = pybind11;
 
+class IndustrialProcessTrampoline : public IndustrialProcess {
+public:
+    PlcState UpdateState(const PlcState& measured, PlcState plc_out) override
+    {
+        PYBIND11_OVERLOAD_PURE(
+            PlcState,               /* Return type */
+            IndustrialProcess,  /* Parent class */
+            UpdateState,        /* Name of function in C++ (must match Python name) */
+            measured, plc_out       /* args */
+        );
+    }
+
+    /// Updates the state of the Process 
+    PlcState UpdateProcess(PlcState state, const PlcState& input) override
+    {
+        PYBIND11_OVERLOAD_PURE(
+            PlcState,               /* Return type */
+            IndustrialProcess,      /* Parent class */
+            UpdateProcess,          /* Name of function in C++ (must match Python name) */
+            state, input           /* args */
+        );
+    }
+};
+
 void
 RunSimulationWrapper()
 {
@@ -75,9 +99,15 @@ PYBIND11_MODULE(industrial_networks, m) {
      */
     py::class_<IndustrialApplication, ns3::Ptr<IndustrialApplication>>(m, "IndustrialApplication");
 
-    py::class_<PlcApplication, IndustrialApplication, ns3::Ptr<PlcApplication>>(m, "Plc")
+    py::class_<PlcApplication, IndustrialApplication, ns3::Ptr<PlcApplication>>(m, "PlcBase")
         .def(py::init<const char*>())
-        .def("link_process", &PlcApplication::LinkProcess)
+        .def(
+            "_do_link_process",
+            static_cast<void(PlcApplication::*)(IndustrialProcessType)>(&PlcApplication::LinkProcess))
+        .def(
+            "_do_link_process",
+            static_cast<void(PlcApplication::*)(std::shared_ptr<IndustrialProcess>)>(&PlcApplication::LinkProcess)
+        )
         .def("get_address", &PlcApplication::GetAddress);
 
     py::class_<ScadaApplication, IndustrialApplication, ns3::Ptr<ScadaApplication>>(m, "Scada")
@@ -117,13 +147,23 @@ PYBIND11_MODULE(industrial_networks, m) {
     py::class_<ns3::Ipv4Mask>(m, "Ipv4Mask")
         .def(py::init<const char*>());
 
-    /**
-     * Industrial Process Type
-     */
+    // TODO: Remove this. It will be implemented but Python and C++ will have their own versions
     py::enum_<IndustrialProcessType>(m, "IndustrialProcessType", "Enum Containing the Default industrial processes types")
         .value("WaterTank", IndustrialProcessType::WATER_TANK)
         .value("SemaphoreLight", IndustrialProcessType::SEMAPHORE_LIGHT)
         .export_values();
+
+    py::class_<IndustrialProcess, IndustrialProcessTrampoline, std::shared_ptr<IndustrialProcess>>(m, "IndustrialProcess")
+        .def(py::init<>())
+        .def("update_state", &IndustrialProcess::UpdateState)
+        .def("update_process", &IndustrialProcess::UpdateProcess);
+    
+    /**
+     * PlcState
+     */
+    py::class_<PlcState>(m, "PlcState")
+        .def("get_digital_state", &PlcState::GetDigitalState)
+        .def("set_digital_state", &PlcState::SetDigitalState);
 
     /**
      * Wrappers

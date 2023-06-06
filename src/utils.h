@@ -22,9 +22,13 @@ uint16_t CombineUint8(uint8_t higher, uint8_t lower);
  */
 uint8_t GetBitsInRangeBE(uint16_t start, uint16_t numOfBits, uint8_t bits);
 
-
 /*
  * Set the bit in the specified position to the specified value
  */
 void SetBitBE(uint8_t& byte, uint8_t position, bool value);
+
+/*
+ * Get the bit in the specified position
+ */
+bool GetBitBE(const uint8_t& byte, uint8_t position);
 

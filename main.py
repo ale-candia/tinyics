@@ -2,89 +2,117 @@
 
 from build.bindings.industrial_networks import *
 
-PLOT_GRAPHS = False
-CAPTURE_PACKETS = True
+CAPTURE_PACKETS = False
 
-pump = []
-valve = []
-level1 = []
-level2 = []
-t = []
+"""
+This Wrapper should be used so that we control the lifetime of
+the linked process, this lets us do link_process(WaterTank()).
 
-def gather_values(vars):
-    pump.append(vars['Pump'].get_value())
-    valve.append(vars['Valve'].get_value())
-    level1.append(vars['L1'].get_value())
-    level2.append(vars['L2'].get_value())
+(Can we get a copy or move ownership to C++?)
+"""
+# TODO: Move this to its own module
+class Plc(PlcBase):
+    def __init__(self, name):
+        super().__init__(name)
 
-    t.append(get_current_time())
+    def link_process(self, ip):
+        self.process = ip
+        self._do_link_process(ip)
 
-def plot_vars():
-    import matplotlib.pyplot as plt
+# TODO: Move this to its own module
+class WaterTank(IndustrialProcess):
+    tank_base_area = 1              # cross-sectional area of the tank in m^2
+    pump_flow = 0.1             # 0.1 m^3/s
+    valve_flow = 0.05           # 0.05 m^3/s
+    level_down_height = 0.2;    # 0.2 m height
+    level_up_height = 0.5;      # 0.5 m height
 
-    fig, (ax0, ax1) = plt.subplots(nrows=1, ncols=2, sharex=True)
+    def __init__(self):
+        super().__init__()
+        self._define_input_positions()
 
-    ax0.set_title('Digital Output')
-    ax0.errorbar(t, pump)
-    ax0.errorbar(t, valve)
+        # State Variables
+        self.curr_height = 0
+        self.prev_time = 0
 
-    ax1.set_title('Sensors (Digital Inputs)')
-    ax1.errorbar(t, level1)
-    ax1.errorbar(t, level2)
+    def UpdateState(self, measured, plc_out) -> PlcState:
+        level_down_on = measured.get_digital_state(self.level_down)
+        level_up_on = measured.get_digital_state(self.level_up)
 
-    fig.suptitle('Water Tank Readings')
-    plt.show()
+        pump_on = plc_out.get_digital_state(self.pump)
+        valve_on = plc_out.get_digital_state(self.valve)
 
+        if level_up_on:
+            # Turn pump off and valve on
+            plc_out.set_digital_state(self.pump, False);
+            plc_out.set_digital_state(self.valve, True);
+
+        elif not level_down_on:
+            plc_out.set_digital_state(self.pump, True);
+            plc_out.set_digital_state(self.valve, False);
+        
+        return plc_out
+
+    def UpdateProcess(self, state, input) -> PlcState:
+        current = get_current_time() # Current time
+
+        pump_on = input.get_digital_state(self.pump)
+        valve_on = input.get_digital_state(self.valve)
+
+        if pump_on:
+            self.curr_height += self.pump_flow * (current - self.prev_time) / self.tank_base_area
+
+        if valve_on:
+            self.curr_height -= self.valve_flow * (current - self.prev_time) / self.tank_base_area
+
+        self.prev_time = current;
+
+        # Set level sensors
+        state.set_digital_state(self.level_down, self.curr_height >= self.level_down_height)
+        state.set_digital_state(self.level_up, self.curr_height >= self.level_up_height);
+
+        return state
+
+    """
+    Define the position of the sensors and actuator as coils from the PLC
+    """
+    def _define_input_positions(self):
+        self.level_down = 0 # lower level sensor 
+        self.level_up = 1   # higher level sensor
+
+        self.pump = 0
+        self.valve = 1
+
+myvar = False
 def scada_loop(vars):
     output = {}
-    a1 = vars["A1"].get_value()
-    test_value = vars["TestVar"].get_value()
-
-    if a1 % 3 == 0:
-        # Invert the value of TestVar each 3 iterations
-        output["TestVar"] = not (True if test_value > 0 else False)
-
-    output["A1"] = a1 + 1
-
-    if PLOT_GRAPHS:
-        gather_values(vars)
-
+    myvar = vars["Pump"].get_value()
+    print("Pump " + str(myvar))
     return output
 
 # Define the automation stations (PLC and SCADA systems)
 plc1 = Plc("plc1")
-plc2 = Plc("plc2")
 scada = Scada("scada")
+
 set_loop(scada, scada_loop)
 
 # Define and link the processes to be controlled to their PLCs
-plc1.link_process(IndustrialProcessType.WaterTank)
-plc2.link_process(IndustrialProcessType.SemaphoreLight)
+plc1.link_process(WaterTank())
 
 # Construct the industrial network
 networkBuilder = IndustrialNetworkBuilder(Ipv4Address("192.168.1.0"), Ipv4Mask("255.255.255.0"))
-networkBuilder.add_to_network(plc1)
 networkBuilder.add_to_network(scada)
-networkBuilder.add_to_network(plc2)
+networkBuilder.add_to_network(plc1)
 networkBuilder.build_network()
 
 # Specify system connections
 scada.add_rtu(plc1.get_address())
-scada.add_rtu(plc2.get_address())
 
-#scada.add_variable(plc1, "Pump", VarType.Coil, 0)
-#scada.add_variable(plc1, "Valve", VarType.Coil, 1)
-
-scada.add_variable(plc2, "TestVar", VarType.Coil, 0)
-scada.add_variable("A1", 0)
+scada.add_variable(plc1, "Pump", VarType.Coil, 0)
 
 if CAPTURE_PACKETS:
     networkBuilder.enable_pcap("sim")
 
 # Run the simulation
 run_simulation()
-
-if PLOT_GRAPHS:
-    plot_vars()
-
 

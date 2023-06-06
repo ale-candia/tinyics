@@ -7,57 +7,39 @@
 
 #include <iostream>
 
-bool
-GetStatus(uint8_t digitalPorts, uint8_t coil)
+PlcState
+WaterTank::UpdateState(const PlcState& plcIn, PlcState plcOut)
 {
-    // Using an enum is safer for this
-    return digitalPorts & coil;
-}
+    bool level1On = plcIn.GetDigitalState(WT_LEVEL1);
+    bool level2On = plcIn.GetDigitalState(WT_LEVEL2);
 
-void
-SetStatus(PlcState& plcIO, uint8_t coil, bool up)
-{
-    if (up)
-    {
-        plcIO.digitalPorts |= coil;
-    }
-    else
-    {
-        plcIO.digitalPorts &= ~coil;
-    }
-}
-
-void
-WaterTank::UpdateState(const PlcState& plcIn, PlcState& plcOut)
-{
-    bool level1On = GetStatus(plcIn.digitalPorts, WT_LEVEL1);
-    bool level2On = GetStatus(plcIn.digitalPorts, WT_LEVEL2);
-
-    bool pupmOn = GetStatus(plcOut.digitalPorts, WT_PUMP);
-    bool valveOn = GetStatus(plcOut.digitalPorts, WT_VALVE);
+    bool pupmOn = plcOut.GetDigitalState(WT_PUMP);
+    bool valveOn = plcOut.GetDigitalState(WT_VALVE);
 
     if (level2On)
     {
         // Turn pump off and valve on
-        SetStatus(plcOut, WT_PUMP, false);
-        SetStatus(plcOut, WT_VALVE, true);
+        plcOut.SetDigitalState(WT_PUMP, false);
+        plcOut.SetDigitalState(WT_VALVE, true);
     }
     else if (!level1On)
     {
         // Turn pump on and valve off
-        SetStatus(plcOut, WT_PUMP, true);
-        SetStatus(plcOut, WT_VALVE, false);
+        plcOut.SetDigitalState(WT_PUMP, true);
+        plcOut.SetDigitalState(WT_VALVE, false);
     }
+
+    return plcOut;
 }
 
-void
-WaterTank::UpdateProcess(PlcState& plcIn, const PlcState& plcOut)
+PlcState
+WaterTank::UpdateProcess(PlcState plcIn, const PlcState& plcOut)
 {
     ns3::Time current = ns3::Simulator::Now();
     //std::clog << "[WaterTank] At time " << current.As(Time::S) << ", before sensor update\n";
 
-    bool pupmOn = GetStatus(plcOut.digitalPorts, WT_PUMP);
-    bool valveOn = GetStatus(plcOut.digitalPorts, WT_VALVE);
+    bool pupmOn = plcOut.GetDigitalState(WT_PUMP);
+    bool valveOn = plcOut.GetDigitalState(WT_VALVE);
 
     if (pupmOn)
     {
@@ -71,24 +53,22 @@ WaterTank::UpdateProcess(PlcState& plcIn, const PlcState& plcOut)
     m_prevTime = current;
 
     // Set level sensors
-    SetStatus(plcIn, WT_LEVEL1, m_currHeight >= s_level1);
-    SetStatus(plcIn, WT_LEVEL2, m_currHeight >= s_level2);
+    plcIn.SetDigitalState(WT_LEVEL1, m_currHeight >= s_level1);
+    plcIn.SetDigitalState(WT_LEVEL2, m_currHeight >= s_level2);
 
-    //std::clog << "- Height:  " << m_currHeight << "\n";
-    //std::clog << "- Pump:  " << pupmOn << "\n";
-    //std::clog << "- Valve:  " << valveOn << "\n";
-    //std::clog << "- Level 1:  " << GetStatus(plcIn.digitalPorts, WT_LEVEL1) << "\n";
-    //std::clog << "- Level 2:  " << GetStatus(plcIn.digitalPorts, WT_LEVEL2) << "\n";
+    return plcIn;
 }
 
-void
-SemaphoreLights::UpdateState(const PlcState& plcIn, PlcState& plcOut)
+PlcState
+SemaphoreLights::UpdateState(const PlcState& plcIn, PlcState plcOut)
 {
     //std::clog << "Updating state [SemaphoreLights - " << Simulator::Now().As(Time::S) << "]\n";
+    return plcOut;
 }
 
-void
-SemaphoreLights::UpdateProcess(PlcState& plcIn, const PlcState& plcOut)
+PlcState
+SemaphoreLights::UpdateProcess(PlcState plcIn, const PlcState& plcOut)
 {
+    return plcIn;
 }
 

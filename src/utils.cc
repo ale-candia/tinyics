@@ -1,5 +1,7 @@
 #include "utils.h"
 
+#include <ns3/core-module.h>
+
 std::tuple<uint8_t, uint8_t>
 SplitUint16(uint16_t value)
 {
@@ -36,5 +38,14 @@ SetBitBE(uint8_t& byte, uint8_t pos, bool value)
             byte &= ~mask; // Set bit to 0
         }
     }
+}
+
+bool
+GetBitBE(const uint8_t& byte, uint8_t pos)
+{
+    if (pos > 7)
+        NS_FATAL_ERROR("Index out of rage '" << (int)pos << "' for byte, ");
+
+    return GetBitsInRangeBE(pos, 1, byte);
 }
 

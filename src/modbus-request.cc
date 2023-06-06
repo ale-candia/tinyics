@@ -16,7 +16,7 @@ DigitalReadRequest::Execute(
     {
         std::vector<uint8_t> data(2);
         data[0] = 1; // Set bit count
-        data[1] = GetBitsInRangeBE(start, num, state.digitalPorts);
+        data[1] = state.GetBits(start, num);
 
         ModbusADU response;
         ModbusADU::CopyBase(adu, response);
@@ -50,7 +50,7 @@ ReadRegistersRequest::Execute(
         uint8_t count = 1;
         for (int i = start; i <= end; i++)
         {
-            auto [higher, lower] = SplitUint16(state.analogPorts[i]);
+            auto [higher, lower] = SplitUint16(state.GetAnalogState(i));
 
             data[count] = static_cast<uint8_t>(higher);
             data[count + 1] = static_cast<uint8_t>(lower);

@@ -131,17 +131,23 @@ PlcApplication::LinkProcess(IndustrialProcessType ipType)
 }
 
 void
+PlcApplication::LinkProcess(std::shared_ptr<IndustrialProcess> ip)
+{
+    m_industrialProcess = ip;
+}
+
+void
 PlcApplication::UpdateOutput()
 {
     if (m_industrialProcess)
     {
         // Join these two together in industrial process and only make one call from here
-        m_industrialProcess->UpdateProcess(m_in, m_out);
-        m_industrialProcess->UpdateState(m_in, m_out);
+        m_in = m_industrialProcess->UpdateProcess(m_in, m_out);
+        m_out = m_industrialProcess->UpdateState(m_in, m_out);
     }
     else
     {
-        NS_FATAL_ERROR("No industrial process specified for PLC: " << this->GetInstanceTypeId().GetName());
+        NS_FATAL_ERROR("No industrial process specified for PLC: " << this->GetName());
     }
     if (ns3::Simulator::Now() < m_stopTime)
     {

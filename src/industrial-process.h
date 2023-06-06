@@ -25,11 +25,11 @@ public:
     virtual ~IndustrialProcess() = default;
 
     
-    /// Updates the state of the PLC 
-    virtual void UpdateState(const PlcState& plcIn, PlcState& plcOut) = 0;
+    // Updates the state of the PLC 
+    virtual PlcState UpdateState(const PlcState& plcIn, PlcState plcOut) = 0;
 
-    /// Updates the state of the Process 
-    virtual void UpdateProcess(PlcState& plcIn, const PlcState& plcOut) = 0;
+    // Returns the updated measurements from the PLC
+    virtual PlcState UpdateProcess(PlcState plcIn, const PlcState& plcOut) = 0;
 };
 
 // Positions for the sensors and actuators in the WaterTank process
@@ -51,8 +51,8 @@ class WaterTank : public IndustrialProcess
 {
 public:
     ~WaterTank() = default;
-    void UpdateState(const PlcState& plcIn, PlcState& plcOut) override;
-    void UpdateProcess(PlcState& plcIn, const PlcState& plcOut) override;
+    PlcState UpdateState(const PlcState& plcIn, PlcState plcOut) override;
+    PlcState UpdateProcess(PlcState plcIn, const PlcState& plcOut) override;
 
 private:
     static constexpr float s_tankWidth = 1; // cross-sectional area of the tank
@@ -68,23 +68,23 @@ private:
 class SemaphoreLights : public IndustrialProcess
 {
 public:
-    void UpdateState(const PlcState& plcIn, PlcState& plcOut) override;
-    void UpdateProcess(PlcState& plcIn, const PlcState& plcOut) override;
+    PlcState UpdateState(const PlcState& plcIn, PlcState plcOut) override;
+    PlcState UpdateProcess(PlcState plcIn, const PlcState& plcOut) override;
 };
 
 /// Factory to build the default Industrial Processes
 class IndustrialProcessFactory
 {
 public:
-    static std::unique_ptr<IndustrialProcess> Create(IndustrialProcessType ipType)
+    static std::shared_ptr<IndustrialProcess> Create(IndustrialProcessType ipType)
     {
         switch (ipType)
         {
             case WATER_TANK:
-                return std::make_unique<WaterTank>();
+                return std::make_shared<WaterTank>();
             
             case SEMAPHORE_LIGHT:
-                return std::make_unique<SemaphoreLights>();
+                return std::make_shared<SemaphoreLights>();
             
             default:
                 return nullptr;

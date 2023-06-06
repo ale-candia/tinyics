@@ -27,7 +27,7 @@ public:
 
     /// Link the PLC to and Industrial Process to control
     void LinkProcess(IndustrialProcessType ip);
-
+    void LinkProcess(std::shared_ptr<IndustrialProcess> ip);
 protected:
     void DoDispose() override;
 
@@ -63,7 +63,7 @@ private:
     ns3::Ptr<ns3::Socket> m_socket;  //!< IPv4 Socket
     PlcState m_in;       //!< State of the PLC input ports
     PlcState m_out;       //!< State of the PLC out ports
-    std::unique_ptr<IndustrialProcess> m_industrialProcess; //!< Industrial process being controlled by the PLC
+    std::shared_ptr<IndustrialProcess> m_industrialProcess; //!< Industrial process being controlled by the PLC
     std::map<MB_FunctionCode, std::shared_ptr<RequestProcessor>> m_RequestProcessors;
 
     friend class IndustrialNetworkBuilder;
