@@ -22,40 +22,7 @@ endif()
 
 add_subdirectory(external/ns-3)
 add_subdirectory(external/pybind11)
-add_subdirectory(bindings)
+add_subdirectory(src/bindings)
+add_subdirectory(src)
 add_subdirectory(sandbox)   # To use library with cpp
-
-#### Build ICS-SIM library ####
-
-set(source_files
-    src/industrial-network-builder.cc
-    src/industrial-process.cc
-    src/modbus.cc
-    src/plc-application.cc
-    src/scada-application.cc
-    src/utils.cc
-    src/modbus-command.cc
-    src/modbus-request.cc
-    src/modbus-response.cc
-)
-
-set(lib_name "icssim")
-
-add_library(${lib_name} SHARED ${source_files})
-
-add_dependencies(${lib_name} libcore libcsma libinternet libnetwork)
-
-target_include_directories(${lib_name} PRIVATE
-    external/ns-3/build/include/
-    src/
-)
-
-target_link_directories(${lib_name} PRIVATE external/ns-3/build/lib/)
-
-target_link_libraries(${lib_name}
-    libcore
-    libcsma
-    libinternet
-    libnetwork
-)
 

@@ -6,7 +6,7 @@ target_link_directories(example PRIVATE ${CMAKE_SOURCE_DIR}/build)
 
 target_include_directories(example PRIVATE
     ${CMAKE_SOURCE_DIR}/external/ns-3/build/include
-    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/icsim
 )
 
 #### Cleaning up pcap files ####

@@ -3,6 +3,7 @@ build/
 
 # Output
 *.pcap
+*cpython*
 
 # Editors/tools
 .vscode/

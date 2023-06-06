@@ -130,10 +130,10 @@ PYBIND11_MODULE(industrial_networks, m)
         .def(py::init<const char*>());
 
     // TODO: Remove this. It will be implemented but Python and C++ will have their own versions
-    py::enum_<IndustrialProcessType>(m, "IndustrialProcessType", "Enum Containing the Default industrial processes types")
-        .value("WaterTank", IndustrialProcessType::WATER_TANK)
-        .value("SemaphoreLight", IndustrialProcessType::SEMAPHORE_LIGHT)
-        .export_values();
+    //py::enum_<IndustrialProcessType>(m, "IndustrialProcessType", "Enum Containing the Default industrial processes types")
+    //    .value("WaterTank", IndustrialProcessType::WATER_TANK)
+    //    .value("SemaphoreLight", IndustrialProcessType::SEMAPHORE_LIGHT)
+    //    .export_values();
 
     py::class_<IndustrialProcess, IndustrialProcessTrampoline, std::shared_ptr<IndustrialProcess>>(m, "IndustrialProcess")
         .def(py::init<>())
