@@ -170,27 +170,13 @@ ScadaApplication::HandleRead(ns3::Ptr<ns3::Socket> socket)
 }
 
 void
+ScadaApplication::Update() {}
+
+void
 ScadaApplication::DoUpdate()
 {
     // Update all statuses
-    if (m_loop)
-        m_loop(m_vars);
-
-    // Create write commands if needed
-    // TODO: WE NEED TO MAKE SURE INPUT VARIABLES (MEASUREMENTS) ARE NOT BEING CHANGED
-    for (auto& var : m_vars)
-    {
-        if (var.second.Changed() && var.second.GetType() == VarType::Coil)
-        {
-            m_WriteCommands.emplace_back(WriteCommand(
-                MB_FunctionCode::WriteSingleCoil,
-                var.second.GetPosition(),
-                var.second.GetValue(),
-                var.second.GetUID()
-            ));
-        }
-        var.second.SetChanged(false);
-    }
+    Update();
 
     // Send Data
     SendAll();
@@ -235,20 +221,6 @@ ScadaApplication::AddVariable(
     commandMap.at(fc).SetReadCount(pos);
 }
 
-void
-ScadaApplication::SetScadaLoop(std::function<void(std::map<std::string, Var>&)> loop)
-{
-    m_loop = loop;
-}
-
-void
-ScadaApplication::AddVariable(
-    const std::string& name,
-    uint16_t value = 0
-){
-    m_vars.insert(std::pair(name, Var(VarType::LocalVariable, value)));
-}
-
 int
 ScadaApplication::GetRTUIndex(const ns3::Address& rtuAddr)
 {
@@ -257,5 +229,30 @@ ScadaApplication::GetRTUIndex(const ns3::Address& rtuAddr)
         NS_FATAL_ERROR("No RTU with address: '" << rtuAddr << "' in SCADA '" << GetName() << '\'');
 
     return it - m_peerAddresses.begin();
+}
+
+void
+ScadaApplication::Write(const std::map<std::string, uint16_t> &vars)
+{
+    // Create write commands if needed
+    for (auto& var : vars)
+    {
+        if (m_vars.find(var.first) != m_vars.end())
+        {
+            const Var& original = m_vars.at(var.first);
+
+            // We can only write to Coils and Holding Registers (Currently Not Implemented)
+            if (original.GetType() == VarType::Coil && original.GetValue() != var.second)
+            {
+                m_WriteCommands.emplace_back(WriteCommand(
+                    MB_FunctionCode::WriteSingleCoil,
+                    original.GetPosition(),
+                    var.second,
+                    original.GetUID()
+                ));
+            }
+        }
+
+    }
 }
 

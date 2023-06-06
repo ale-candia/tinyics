@@ -1,6 +1,6 @@
 #include "utils.h"
 
-#include <ns3/core-module.h>
+#include <ns3/fatal-error.h>
 
 std::tuple<uint8_t, uint8_t>
 SplitUint16(uint16_t value)

@@ -5,20 +5,50 @@ from build.bindings.industrial_networks import *
 CAPTURE_PACKETS = False
 
 """
-This Wrapper should be used so that we control the lifetime of
-the linked process, this lets us do link_process(WaterTank()).
+This Wrapper should be used so that we control the lifetime of the linked
+process, this lets us do link_process(WaterTank()).
 
 (Can we get a copy or move ownership to C++?)
 """
-# TODO: Move this to its own module
-class Plc(PlcBase):
+#TODO: move this to its own module
+class Plc(_PlcBase):
     def __init__(self, name):
         super().__init__(name)
 
+    """
+    Link the process and store a reference to it to control
+    its lifetime. We also return self so that this can be
+    used as Plc("name").link_proces(process)
+    """
     def link_process(self, ip):
-        self.process = ip
+        self.__process = ip
         self._do_link_process(ip)
 
+        return self
+
+"""
+Simple Water Tank Industrial Process, the process is as follows:
+
+    - A pump to fill the tank at a given pump_flow
+    - A valve to empty the tank at a given valve_flow
+    - A level_up level sensor to identify when the tank is getting filled
+    - A level_down level sensor to identify when the tank is getting emptied
+  
+ pump  ___
+          |
+       ___|___
+      |       |
+      |       |--- level_up
+      |       |
+      |-------|
+      |       |
+      |       |
+      |       |--- level_down
+      |_______|
+          |
+          |___ valve
+
+"""
 # TODO: Move this to its own module
 class WaterTank(IndustrialProcess):
     tank_base_area = 1              # cross-sectional area of the tank in m^2
@@ -83,21 +113,21 @@ class WaterTank(IndustrialProcess):
         self.pump = 0
         self.valve = 1
 
-myvar = False
-def scada_loop(vars):
-    output = {}
-    myvar = vars["Pump"].get_value()
-    print("Pump " + str(myvar))
-    return output
+class MyScada(Scada):
+    myvar = False
+
+    def __init__(self, name):
+        super().__init__(name)
+
+    def Update(self):
+        output = {}
+        return output
 
 # Define the automation stations (PLC and SCADA systems)
-plc1 = Plc("plc1")
-scada = Scada("scada")
-
-set_loop(scada, scada_loop)
+plc1 = Plc("plc1").link_process(WaterTank())
+scada = MyScada("scada")
 
 # Define and link the processes to be controlled to their PLCs
-plc1.link_process(WaterTank())
 
 # Construct the industrial network
 networkBuilder = IndustrialNetworkBuilder(Ipv4Address("192.168.1.0"), Ipv4Mask("255.255.255.0"))

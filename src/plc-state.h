@@ -4,7 +4,7 @@
 
 #include <cstdint>
 
-#include "ns3/core-module.h"
+#include "ns3/fatal-error.h"
 
 class PlcState
 {

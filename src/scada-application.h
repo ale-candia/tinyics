@@ -41,9 +41,14 @@ public:
     void AddRTU(ns3::Ipv4Address addr);
 
     void AddVariable(const ns3::Ptr<PlcApplication>& plc, const std::string& name, VarType type, uint8_t pos);
-    void AddVariable(const std::string& name, uint16_t value);
 
-    void SetScadaLoop(std::function<void(std::map<std::string, Var>&)> loop);
+    /*
+     * Run the update/logic of the SCADA
+     *
+     * Is expected to be overwritten, if not SCADA is used in read only mode if variables were defined
+     */
+    virtual void Update();
+    void Write(const std::map<std::string, uint16_t>& vars);
 
 protected:
     void DoDispose() override;
@@ -90,7 +95,6 @@ private:
     std::map<std::string, Var> m_vars;
     std::map<MB_FunctionCode, std::shared_ptr<ResponseProcessor>> m_ResponseProcessors;
     std::vector<WriteCommand> m_WriteCommands;
-    std::function<void(std::map<std::string, Var>&)> m_loop;
 
     static constexpr uint16_t s_PeerPort = 502;     //!< Remote peer port
 };
