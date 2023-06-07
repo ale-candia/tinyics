@@ -51,12 +51,30 @@ RegisterReadResponse::Execute(const ModbusADU& adu, const std::vector<Var*>& var
         uint8_t high = adu.GetDataByte(2 * pos + 1);
         uint8_t low = adu.GetDataByte(2 * pos + 2);
 
-        // If the bit is turned on, then set the value to 1 (true) otherwise set the value
-        // to 0
         uint16_t value = CombineUint8(high, low);
 
         var->SetValue(value);
     }
-
 }
 
+void
+WriteCoilResponse::Execute(const ModbusADU& adu, const std::vector<Var*>& vars, uint16_t start) const
+{
+    // Only Data bytes (without uid and function code)
+    uint16_t buff_size = adu.GetLengthField() - 2;
+
+    // Write Coil Responses are always 4 bytes
+    if (buff_size != 4)
+        return;
+
+    // Address/Position of the modified value in the RTU
+    uint16_t pos = CombineUint8(adu.GetDataByte(1), adu.GetDataByte(0));
+
+    auto var = std::find_if(vars.begin(), vars.end(), [pos](const Var* v) {return v->GetPosition() == pos; });
+
+    if (var != vars.end())
+    {
+        uint16_t value = CombineUint8(adu.GetDataByte(3), adu.GetDataByte(2));
+        (*var)->SetValue(value);
+    }
+}

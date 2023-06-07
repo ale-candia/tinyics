@@ -60,6 +60,8 @@ private:
     void UpdateOutput();
 
     static constexpr uint16_t s_port = 502;       //!< Port on which we listen for incoming packets
+    ns3::Time m_interval;
+    ns3::Time m_step = ns3::Seconds(0.0);
     ns3::Ptr<ns3::Socket> m_socket;  //!< IPv4 Socket
     PlcState m_in;       //!< State of the PLC input ports
     PlcState m_out;       //!< State of the PLC out ports

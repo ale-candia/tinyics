@@ -18,6 +18,7 @@ PlcApplication::GetTypeId()
 
 PlcApplication::PlcApplication(const char* name) : IndustrialApplication(name)
 {
+    m_interval = ns3::Seconds(0.5);
     // Setup Modbus Responses (Can also be created dynamically/on demand if needed)
     m_RequestProcessors.insert(std::pair(
         MB_FunctionCode::ReadCoils,
@@ -151,7 +152,8 @@ PlcApplication::UpdateOutput()
     }
     if (ns3::Simulator::Now() < m_stopTime)
     {
-        ScheduleUpdate(ns3::Seconds(1.0));
+        m_step += m_interval;
+        ScheduleUpdate(m_step - ns3::Simulator::Now());
     }
 }
 

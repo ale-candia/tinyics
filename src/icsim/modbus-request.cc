@@ -77,6 +77,8 @@ WriteCoilRequest::Execute(
     uint16_t pos = CombineUint8(adu.GetDataByte(0), adu.GetDataByte(1));
     uint16_t value = CombineUint8(adu.GetDataByte(2), adu.GetDataByte(3));
 
+    state.SetDigitalState(pos, value > 0);
+
     ns3::Ptr<ns3::Packet> p = adu.ToPacket();
     sock->SendTo(p, 0, from);
 }

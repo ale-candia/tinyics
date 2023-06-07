@@ -38,12 +38,13 @@ class ScadaTrampoline : public ScadaApplication
 public:
     ScadaTrampoline(const char* name) : ScadaApplication(name) {}
 
-    void Update() override
+    void Update(const std::map<std::string, Var>& vars) override
     {
         PYBIND11_OVERLOAD(
             void,
             ScadaApplication,
-            Update
+            Update,
+            vars
         );
     }
 };
@@ -129,12 +130,6 @@ PYBIND11_MODULE(industrial_networks, m)
     py::class_<ns3::Ipv4Mask>(m, "Ipv4Mask")
         .def(py::init<const char*>());
 
-    // TODO: Remove this. It will be implemented but Python and C++ will have their own versions
-    //py::enum_<IndustrialProcessType>(m, "IndustrialProcessType", "Enum Containing the Default industrial processes types")
-    //    .value("WaterTank", IndustrialProcessType::WATER_TANK)
-    //    .value("SemaphoreLight", IndustrialProcessType::SEMAPHORE_LIGHT)
-    //    .export_values();
-
     py::class_<IndustrialProcess, IndustrialProcessTrampoline, std::shared_ptr<IndustrialProcess>>(m, "IndustrialProcess")
         .def(py::init<>())
         .def("update_state", &IndustrialProcess::UpdateState)
@@ -144,8 +139,11 @@ PYBIND11_MODULE(industrial_networks, m)
      * PlcState
      */
     py::class_<PlcState>(m, "PlcState")
+        .def(py::init<>())
         .def("get_digital_state", &PlcState::GetDigitalState)
-        .def("set_digital_state", &PlcState::SetDigitalState);
+        .def("set_digital_state", &PlcState::SetDigitalState)
+        .def("get_analog_state", &PlcState::GetAnalogState)
+        .def("set_analog_state", &PlcState::SetAnalogState);
 
     /**
      * Wrappers

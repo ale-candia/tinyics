@@ -27,4 +27,8 @@ class RegisterReadResponse : public ResponseProcessor
     void Execute(const ModbusADU& adu, const std::vector<Var*>& vars, uint16_t start) const override;
 };
 
-
+class WriteCoilResponse : public ResponseProcessor
+{
+  public:
+    void Execute(const ModbusADU& adu, const std::vector<Var*>& vars, uint16_t start) const override;
+};

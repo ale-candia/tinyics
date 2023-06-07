@@ -31,7 +31,9 @@ public:
 
     uint8_t GetUID() const { return m_UID; }
 
-    void SetValue(uint16_t val) { m_Value = val; }
+    void SetValue(uint16_t val) {
+        m_Value = (m_Type == VarType::Coil) ? val > 0 : val;
+    }
 
     /*
      * Get the function code use to read this variable type
@@ -54,6 +56,7 @@ public:
         switch (fc)
         {
             case MB_FunctionCode::ReadCoils:
+            case MB_FunctionCode::WriteSingleCoil:
                 return VarType::Coil;
             case MB_FunctionCode::ReadDiscreteInputs:
                 return VarType::DigitalInput;

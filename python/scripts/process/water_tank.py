@@ -38,29 +38,16 @@ class WaterTank(IndustrialProcess):
         self.curr_height = 0
         self.prev_time = 0
 
-    def UpdateState(self, measured, plc_out) -> PlcState:
-        level_down_on = measured.get_digital_state(self.level_down)
-        level_up_on = measured.get_digital_state(self.level_up)
-
-        pump_on = plc_out.get_digital_state(self.pump)
-        valve_on = plc_out.get_digital_state(self.valve)
-
-        if level_up_on:
-            # Turn pump off and valve on
-            plc_out.set_digital_state(self.pump, False);
-            plc_out.set_digital_state(self.valve, True);
-
-        elif not level_down_on:
-            plc_out.set_digital_state(self.pump, True);
-            plc_out.set_digital_state(self.valve, False);
-        
-        return plc_out
-
+    """
+    Update the state of the process. This is updating the relevant variables
+    of the process and also reflecting those values on the PLC input, since the
+    PLC is usually measuring some variable form the process.
+    """
     def UpdateProcess(self, state, input) -> PlcState:
         current = get_current_time() # Current time
 
-        pump_on = input.get_digital_state(self.pump)
-        valve_on = input.get_digital_state(self.valve)
+        pump_on = input.get_digital_state(self.PUMP)
+        valve_on = input.get_digital_state(self.VALVE)
 
         if pump_on:
             self.curr_height += self.pump_flow * (current - self.prev_time) / self.tank_base_area
@@ -71,18 +58,42 @@ class WaterTank(IndustrialProcess):
         self.prev_time = current;
 
         # Set level sensors
-        state.set_digital_state(self.level_down, self.curr_height >= self.level_down_height)
-        state.set_digital_state(self.level_up, self.curr_height >= self.level_up_height);
+        state.set_digital_state(self.LEVEL_DOWN, self.curr_height >= self.level_down_height)
+        state.set_digital_state(self.LEVEL_UP, self.curr_height >= self.level_up_height);
 
         return state
+
+    """
+    Update the outupt states of the PLC, this is basically the logic of the PLC.
+    We get some measurements of the process and, according to those measurements,
+    we update the output of the PLC to some desired value
+    """
+    def UpdateState(self, measured, plc_out) -> PlcState:
+        level_down_on = measured.get_digital_state(self.LEVEL_DOWN)
+        level_up_on = measured.get_digital_state(self.LEVEL_UP)
+
+        pump_on = plc_out.get_digital_state(self.PUMP)
+        valve_on = plc_out.get_digital_state(self.VALVE)
+
+        if level_up_on:
+            # Turn pump off and valve on
+            plc_out.set_digital_state(self.PUMP, False);
+            plc_out.set_digital_state(self.VALVE, True);
+
+        elif not level_down_on:
+            plc_out.set_digital_state(self.PUMP, True);
+            plc_out.set_digital_state(self.VALVE, False);
+        
+        return plc_out
+
 
     """
     Define the position of the sensors and actuator as coils from the PLC
     """
     def _define_input_positions(self):
-        self.level_down = 0 # lower level sensor 
-        self.level_up = 1   # higher level sensor
+        self.LEVEL_DOWN = 0 # lower level sensor 
+        self.LEVEL_UP = 1   # higher level sensor
 
-        self.pump = 0
-        self.valve = 1
+        self.PUMP = 0
+        self.VALVE = 1
 

@@ -18,6 +18,7 @@ ScadaApplication::ScadaApplication(const char* name) : IndustrialApplication(nam
     m_ResponseProcessors.insert(std::pair(MB_FunctionCode::ReadCoils, std::make_shared<DigitalReadResponse>()));                                            
     m_ResponseProcessors.insert(std::pair(MB_FunctionCode::ReadDiscreteInputs, m_ResponseProcessors.at(MB_FunctionCode::ReadCoils)));
     m_ResponseProcessors.insert(std::pair(MB_FunctionCode::ReadInputRegisters, std::make_shared<RegisterReadResponse>()));
+    m_ResponseProcessors.insert(std::pair(MB_FunctionCode::WriteSingleCoil, std::make_shared<WriteCoilResponse>()));
 }
 
 ScadaApplication::~ScadaApplication()
@@ -84,7 +85,7 @@ ScadaApplication::StartApplication()
         m_sockets.push_back(socket);
     }
 
-    ScheduleUpdate(ns3::Seconds(0.));
+    ScheduleRead(ns3::Seconds(0.));
 }
 
 void
@@ -98,9 +99,9 @@ ScadaApplication::StopApplication()
     }
 }
 
-void ScadaApplication::ScheduleUpdate(ns3::Time dt)
+void ScadaApplication::ScheduleRead(ns3::Time dt)
 {
-    ns3::Simulator::Schedule(dt, &ScadaApplication::DoUpdate, this);
+    ns3::Simulator::Schedule(dt, &ScadaApplication::SendAll, this);
 }
 
 void
@@ -115,8 +116,15 @@ ScadaApplication::SendAll()
         {
             command.second.Execute(socket, m_transactionId, i+1);
             m_transactionId++;
+            m_PendingPackets++;
         }
 
+    }
+
+    if (ns3::Simulator::Now() < m_stopTime)
+    {
+        m_step += m_interval;
+        ScheduleRead(m_step - ns3::Simulator::Now());
     }
 }
 
@@ -128,62 +136,66 @@ ScadaApplication::HandleRead(ns3::Ptr<ns3::Socket> socket)
 {
     ns3::Ptr<ns3::Packet> packet;
     ns3::Address from;
+
+    // We only run the SCADA loop if we have read from the RTU
+    bool doUpdate = false;
+
     while ((packet = socket->RecvFrom(from)))
     {
+
         if (ns3::InetSocketAddress::IsMatchingType(from))
         {
             for(const ModbusADU& adu : ModbusADU::GetModbusADUs(packet))
             {
-                if (adu.GetFunctionCode() == MB_FunctionCode::WriteSingleCoil)
-                    continue;
+                if (!doUpdate && adu.GetFunctionCode() != MB_FunctionCode::WriteSingleCoil)
+                {
+                    doUpdate = true;
+                    m_PendingPackets--;
+                }
+
+                auto idx = adu.GetUnitID() - 1;
 
                 auto type = Var::IntoVarType(adu.GetFunctionCode());
-                auto idx = adu.GetUnitID() - 1;
 
                 std::vector<Var*> vars;
 
-                // No need to use variables used with different function codes
+                // Update variables of the same function code and in the same RTU
                 for (auto& var : m_vars)
                 {
-                    if (type == var.second.GetType())
+                    if (type == var.second.GetType() && var.second.GetUID() == adu.GetUnitID())
                         vars.push_back(&var.second);
                 }
 
-                uint16_t start = m_ReadCommands[idx].at(adu.GetFunctionCode()).GetStart();
+                uint16_t start;
+                if (adu.GetFunctionCode() != MB_FunctionCode::WriteSingleCoil)
+                    start = m_ReadCommands[idx].at(adu.GetFunctionCode()).GetStart();
 
                 m_ResponseProcessors.at(adu.GetFunctionCode())->Execute(adu, vars, start);
-            }
-
-            // Execute writes
-            if (m_WriteCommands.size() > 0)
-            {
-                for (const auto& command : m_WriteCommands)
-                {
-                    command.Execute(socket, m_transactionId);
-                    m_transactionId++;
-                }
-                m_WriteCommands.clear();
             }
         }
     }
 
+    if (doUpdate && m_PendingPackets == 0)
+        DoUpdate();
 }
 
 void
-ScadaApplication::Update() {}
+ScadaApplication::Update(const std::map<std::string, Var>& vars) {}
 
 void
 ScadaApplication::DoUpdate()
 {
-    // Update all statuses
-    Update();
+    Update(m_vars);
 
-    // Send Data
-    SendAll();
-
-    if (ns3::Simulator::Now() < m_stopTime)
+    // After executing the reads and updating variables we execute the writes
+    for (auto it = m_WriteCommands.begin(); it != m_WriteCommands.end();)
     {
-        ScheduleUpdate(m_interval);
+        auto socket = m_sockets[it->GetUID() - 1];
+
+        it->Execute(socket, m_transactionId);
+        it = m_WriteCommands.erase(it);
+
+        m_transactionId++;
     }
 }
 
@@ -241,7 +253,8 @@ ScadaApplication::Write(const std::map<std::string, uint16_t> &vars)
         {
             const Var& original = m_vars.at(var.first);
 
-            // We can only write to Coils and Holding Registers (Currently Not Implemented)
+            // Only write to Coils and Holding Registers (Currently Not Implemented)
+            // Only write if the value changed
             if (original.GetType() == VarType::Coil && original.GetValue() != var.second)
             {
                 m_WriteCommands.emplace_back(WriteCommand(
