@@ -13,7 +13,7 @@ ScadaApplication::GetTypeId()
 ScadaApplication::ScadaApplication(const char* name) : IndustrialApplication(name)
 {
     m_started = false;
-    m_interval = ns3::Seconds(1.0);
+    m_interval = ns3::Seconds(0.5);
 
     m_ResponseProcessors.insert(std::pair(MB_FunctionCode::ReadCoils, std::make_shared<DigitalReadResponse>()));                                            
     m_ResponseProcessors.insert(std::pair(MB_FunctionCode::ReadDiscreteInputs, m_ResponseProcessors.at(MB_FunctionCode::ReadCoils)));
@@ -147,7 +147,7 @@ ScadaApplication::HandleRead(ns3::Ptr<ns3::Socket> socket)
         {
             for(const ModbusADU& adu : ModbusADU::GetModbusADUs(packet))
             {
-                if (!doUpdate && adu.GetFunctionCode() != MB_FunctionCode::WriteSingleCoil)
+                if (adu.GetFunctionCode() != MB_FunctionCode::WriteSingleCoil)
                 {
                     doUpdate = true;
                     m_PendingPackets--;

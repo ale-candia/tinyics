@@ -35,7 +35,7 @@ WaterTank::UpdateState(const PlcState& plcIn, PlcState plcOut)
 PlcState
 WaterTank::UpdateProcess(PlcState plcIn, const PlcState& plcOut)
 {
-    ns3::Time current = ns3::Simulator::Now();
+    auto current = ns3::Simulator::Now().ToDouble(ns3::Time::S);
     //std::clog << "[WaterTank] At time " << current.As(Time::S) << ", before sensor update\n";
 
     bool pupmOn = plcOut.GetDigitalState(WT_PUMP);
@@ -43,11 +43,11 @@ WaterTank::UpdateProcess(PlcState plcIn, const PlcState& plcOut)
 
     if (pupmOn)
     {
-        m_currHeight += s_pumpFlow * (current.ToDouble(ns3::Time::S) - m_prevTime.ToDouble(ns3::Time::S)) / s_tankWidth;
+        m_currHeight += s_pumpFlow * (current - m_prevTime) / s_tankWidth;
     }
     if (valveOn)
     {
-        m_currHeight -= s_valveFlow * (current.ToDouble(ns3::Time::S) - m_prevTime.ToDouble(ns3::Time::S)) / s_tankWidth;
+        m_currHeight -= s_valveFlow * (current - m_prevTime) / s_tankWidth;
     }
 
     m_prevTime = current;
@@ -62,7 +62,6 @@ WaterTank::UpdateProcess(PlcState plcIn, const PlcState& plcOut)
 PlcState
 SemaphoreLights::UpdateState(const PlcState& plcIn, PlcState plcOut)
 {
-    //std::clog << "Updating state [SemaphoreLights - " << Simulator::Now().As(Time::S) << "]\n";
     return plcOut;
 }
 

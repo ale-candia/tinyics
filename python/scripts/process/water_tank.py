@@ -8,20 +8,23 @@ Simple Water Tank Industrial Process, the process is as follows:
     - A level_up level sensor to identify when the tank is getting filled
     - A level_down level sensor to identify when the tank is getting emptied
   
- pump  ___
-          |
-       ___|___
-      |       |
-      |       |--- level_up
-      |       |
-      |-------|
-      |       |
-      |       |
-      |       |--- level_down
-      |_______|
-          |
-          |___ valve
+ level  ___
+ sensor    |
+           |
+        ___|___
+       |       |
+       |       |--- pump
+       |       |
+       |-------|
+       |       |
+       |       |
+       |       |--- level_down
+       |_______|
+           |
+           |___ valve
 
+NOTE: We use measurements in mm since receiving/sending float number
+      information is still not supported
 """
 class WaterTank(IndustrialProcess):
     tank_base_area = 1          # cross-sectional area of the tank in m^2
@@ -57,9 +60,8 @@ class WaterTank(IndustrialProcess):
 
         self.prev_time = current;
 
-        # Set level sensors
-        state.set_digital_state(self.LEVEL_DOWN, self.curr_height >= self.level_down_height)
-        state.set_digital_state(self.LEVEL_UP, self.curr_height >= self.level_up_height);
+        # Set height sensors (send data in mm)
+        state.set_analog_state(self.LEVEL_SENSOR, int(self.curr_height * 1000))
 
         return state
 
@@ -69,18 +71,17 @@ class WaterTank(IndustrialProcess):
     we update the output of the PLC to some desired value
     """
     def UpdateState(self, measured, plc_out) -> PlcState:
-        level_down_on = measured.get_digital_state(self.LEVEL_DOWN)
-        level_up_on = measured.get_digital_state(self.LEVEL_UP)
+        height = measured.get_analog_state(self.LEVEL_SENSOR)
 
         pump_on = plc_out.get_digital_state(self.PUMP)
         valve_on = plc_out.get_digital_state(self.VALVE)
 
-        if level_up_on:
+        if height >= self.level_up_height:
             # Turn pump off and valve on
             plc_out.set_digital_state(self.PUMP, False);
             plc_out.set_digital_state(self.VALVE, True);
 
-        elif not level_down_on:
+        elif not height >= self.level_down_height:
             plc_out.set_digital_state(self.PUMP, True);
             plc_out.set_digital_state(self.VALVE, False);
         
@@ -91,9 +92,8 @@ class WaterTank(IndustrialProcess):
     Define the position of the sensors and actuator as coils from the PLC
     """
     def _define_input_positions(self):
-        self.LEVEL_DOWN = 0 # lower level sensor 
-        self.LEVEL_UP = 1   # higher level sensor
+        self.LEVEL_SENSOR = 0   # Analog level sensor is in position 0
 
-        self.PUMP = 0
-        self.VALVE = 1
+        self.PUMP = 0           # ON/OFF pump is on the output position 0
+        self.VALVE = 1          # ON/OFF valve is on the output position 1
 

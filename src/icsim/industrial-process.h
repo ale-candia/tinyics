@@ -61,7 +61,7 @@ private:
     static constexpr float s_level1 = 0.2; // lower level sensor height
     static constexpr float s_level2 = 0.5; // higher level sensor height
 
-    ns3::Time m_prevTime;
+    double m_prevTime;
     float m_currHeight;
 };
 

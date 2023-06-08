@@ -51,9 +51,6 @@ public:
         output["pump_light"] = vars.at("pump").GetValue() > 0;
         output["valve_light"] = vars.at("valve").GetValue() > 0;
 
-        std::cout << "pump: " << (bool)vars.at("pump").GetValue()
-            << " at " << ns3::Simulator::Now().As(ns3::Time::MS) << std::endl;
-
         this->Write(output);
     }
 };

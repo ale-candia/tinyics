@@ -4,11 +4,16 @@
 
 - try out different simulation scenarios and leave them as separate examples
 
-- Try out many to many relationships (2 or more SCADAS vs 2 or more PLCs)
+- README and Documentation. Add a list of supported and unsupported features:
+    - [Unsuported] SCADA to SCADA and PLC to PLC communications
+    - Some modbus commands
+    - float variables as analog inputs
 
-- More Documentation.
+- Add refresh rates
 
 ### PRIORITY ###
+
+- Add inheritance for the PLC to separate update loops
 
 - Make Request Processors Static (no need to create new instances for each plc)
 
@@ -27,8 +32,9 @@
         update_state(self, measured, plc_out)
         return plc_out
     ```
-  And the changes made by the user will be reflected in place in the plc_out object
+  And the changes made by the user will be reflected in place in the ```plc_out``` object
 
+- Set modifiable network speeds
 
 ### LOWER PRIORITY ###
 
