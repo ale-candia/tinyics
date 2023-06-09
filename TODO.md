@@ -32,13 +32,13 @@
         update_state(self, measured, plc_out)
         return plc_out
     ```
-  And the changes made by the user will be reflected in place in the ```plc_out``` object
+  And the changes made by the user will be reflected in place in the `plc_out` object
 
 - Set modifiable network speeds
 
 ### LOWER PRIORITY ###
 
-- Consider changing the ```scada.add_rtu(plc1.get_address())``` to just use ```scada.add_rtu(plc1)``` instead. This allows us to get the address whenever we want. And we don't have to wait for the user to call build_network() before doing this.
+- Consider changing the `scada.add_rtu(plc1.get_address())` to just use `scada.add_rtu(plc1)` instead. This allows us to get the address whenever we want. And we don't have to wait for the user to call build_network() before doing this.
 
 - Expose operators for custom Var class for easier usage (take into consideration the VarType)
 

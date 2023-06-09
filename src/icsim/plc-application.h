@@ -26,7 +26,7 @@ public:
     ~PlcApplication() override;
 
     /// Link the PLC to and Industrial Process to control
-    void LinkProcess(IndustrialProcessType ip);
+    void LinkProcess(IndustrialProcess ip);
     void LinkProcess(std::shared_ptr<IndustrialProcess> ip);
 protected:
     void DoDispose() override;

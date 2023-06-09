@@ -32,3 +32,15 @@ void SetBitBE(uint8_t& byte, uint8_t position, bool value);
  */
 bool GetBitBE(const uint8_t& byte, uint8_t position);
 
+/*
+ * Normalize value to the specified range. A.K.A. Linearly Scaling
+ *
+ * (Fails if input is not in the range)
+ */
+double NormalizeInRange(double value, double min, double max);
+
+/*
+ * For a given uint16_t value scale it to the range [min, max]
+ */
+double DenormalizeU16InRange(uint16_t value, double min, double max);
+

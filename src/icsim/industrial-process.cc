@@ -1,45 +1,45 @@
 #include "industrial-process.h"
 
-#include "plc-application.h"
-
 #include "ns3/nstime.h"
-#include "ns3/simulator.h"
 
-#include <iostream>
+WaterTank::WaterTank()
+{
+    m_currHeight = AnalogSensor(0, 10);
+}
 
 PlcState
-WaterTank::UpdateState(const PlcState& plcIn, PlcState plcOut)
+WaterTank::UpdateState(const PlcState& measured, PlcState plcOut)
 {
-    bool level1On = plcIn.GetDigitalState(WT_LEVEL1);
-    bool level2On = plcIn.GetDigitalState(WT_LEVEL2);
+    // The value returned by the PLC is a 16-bit value (called word) that 
+    // has to be denormalized into the actual physical value
+    double height = DenormalizeU16InRange(measured.GetAnalogState(LEVEL_SENSOR_POS), 0, 10);
 
-    bool pupmOn = plcOut.GetDigitalState(WT_PUMP);
-    bool valveOn = plcOut.GetDigitalState(WT_VALVE);
+    bool pumpOn = plcOut.GetDigitalState(PUMP_POS);
+    bool valveOn = plcOut.GetDigitalState(VALVE_POS);
 
-    if (level2On)
+    if (height > s_level2)
     {
         // Turn pump off and valve on
-        plcOut.SetDigitalState(WT_PUMP, false);
-        plcOut.SetDigitalState(WT_VALVE, true);
+        plcOut.SetDigitalState(PUMP_POS, false);
+        plcOut.SetDigitalState(VALVE_POS, true);
     }
-    else if (!level1On)
+    else if (height < s_level1)
     {
         // Turn pump on and valve off
-        plcOut.SetDigitalState(WT_PUMP, true);
-        plcOut.SetDigitalState(WT_VALVE, false);
+        plcOut.SetDigitalState(PUMP_POS, true);
+        plcOut.SetDigitalState(VALVE_POS, false);
     }
 
     return plcOut;
 }
 
 PlcState
-WaterTank::UpdateProcess(PlcState plcIn, const PlcState& plcOut)
+WaterTank::UpdateProcess(PlcState state, const PlcState& input)
 {
     auto current = ns3::Simulator::Now().ToDouble(ns3::Time::S);
-    //std::clog << "[WaterTank] At time " << current.As(Time::S) << ", before sensor update\n";
 
-    bool pupmOn = plcOut.GetDigitalState(WT_PUMP);
-    bool valveOn = plcOut.GetDigitalState(WT_VALVE);
+    bool pupmOn = input.GetDigitalState(PUMP_POS);
+    bool valveOn = input.GetDigitalState(VALVE_POS);
 
     if (pupmOn)
     {
@@ -52,22 +52,9 @@ WaterTank::UpdateProcess(PlcState plcIn, const PlcState& plcOut)
 
     m_prevTime = current;
 
-    // Set level sensors
-    plcIn.SetDigitalState(WT_LEVEL1, m_currHeight >= s_level1);
-    plcIn.SetDigitalState(WT_LEVEL2, m_currHeight >= s_level2);
+    // update level sensor
+    state.SetAnalogState(LEVEL_SENSOR_POS, m_currHeight);
 
-    return plcIn;
-}
-
-PlcState
-SemaphoreLights::UpdateState(const PlcState& plcIn, PlcState plcOut)
-{
-    return plcOut;
-}
-
-PlcState
-SemaphoreLights::UpdateProcess(PlcState plcIn, const PlcState& plcOut)
-{
-    return plcIn;
+    return state;
 }
 

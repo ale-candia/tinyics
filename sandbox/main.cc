@@ -64,7 +64,7 @@ main(int argc, char* argv[])
     ns3::Ptr<ScadaApplication> scada = ns3::CreateObject<MyScada>("scada");
 
     // Define and link the processes to be controlled to their PLCs
-    plc1 -> LinkProcess(IndustrialProcessType::WATER_TANK);
+    plc1 -> LinkProcess(std::make_shared<WaterTank>());
     plc2 -> LinkProcess(std::make_shared<Semaphore>());
 
     // Construct the industrial network
@@ -78,8 +78,9 @@ main(int argc, char* argv[])
     scada->AddRTU(plc1->GetAddress());
     scada->AddRTU(plc2->GetAddress());
 
-    scada->AddVariable(plc1, "pump", VarType::Coil, WT_PUMP);
-    scada->AddVariable(plc1, "valve", VarType::Coil, WT_VALVE);
+    scada->AddVariable(plc1, "pump", VarType::Coil, WaterTank::PUMP_POS);
+    scada->AddVariable(plc1, "valve", VarType::Coil, WaterTank::VALVE_POS);
+    scada->AddVariable(plc1, "level_sensor", VarType::InputRegister, WaterTank::LEVEL_SENSOR_POS);
 
     scada->AddVariable(plc2, "pump_light", VarType::Coil, Semaphore::PUMP_LIGHT_POS);
     scada->AddVariable(plc2, "valve_light", VarType::Coil, Semaphore::VALVE_LIGHT_POS);

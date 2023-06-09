@@ -13,7 +13,7 @@ not connected to the first one.
 from icsim import *
 
 GENERATE_PCAP_FILE = False
-GENERATE_PLOT = False
+GENERATE_PLOT = True
 
 pump_light = []
 valve_light = []
@@ -30,9 +30,6 @@ class Semaphore(IndustrialProcess):
 
     def __init__(self):
         super().__init__()
-
-        self.pump_prev_state = False
-        self.valve_prev_state = False
 
     def UpdateProcess(self, state, input) -> PlcState:
 
@@ -51,9 +48,6 @@ tank_height = []
 t_wt = []
 
 class MyScada(Scada):
-    pump_prev_state = False
-    valve_prev_state = False
-
     def __init__(self, name):
         super().__init__(name)
 
@@ -66,7 +60,7 @@ class MyScada(Scada):
         output["valve_light"] = 1 if vars["valve"].get_value() > 0 else 0
 
         # Gather Values for graph
-        tank_height.append(vars["tank_height"].get_value())
+        tank_height.append(scale_word_to_range(vars["tank_height"].get_value(), 0, 10))
         t_wt.append(get_current_time())
 
         self._write(output)
@@ -112,11 +106,15 @@ if GENERATE_PLOT:
     # Wether the water tank is on or not (from the scada)
     axs[0].plot(t_wt, tank_height)
     axs[0].set_title('Water Tank Height')
+    axs[0].grid()
 
     axs[1].plot(t_s, pump_light, 'tab:orange', drawstyle='steps')
     axs[1].set_title('Pump Light ON/OFF')
+    axs[1].grid()
 
     axs[2].plot(t_s, valve_light, 'tab:green', drawstyle='steps')
     axs[2].set_title('Valve Light ON/OFF')
+    axs[2].grid()
+
     plt.show()
 

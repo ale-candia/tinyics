@@ -121,14 +121,14 @@ PlcApplication::HandleRead(ns3::Ptr<ns3::Socket> socket)
 }
 
 void
-PlcApplication::LinkProcess(IndustrialProcessType ipType)
+PlcApplication::LinkProcess(IndustrialProcess ipType)
 {
     if (m_industrialProcess)
     {
         NS_FATAL_ERROR("Industrial Process Already Specified for PLC(" << this << ')');
     }
 
-    m_industrialProcess = IndustrialProcessFactory::Create(ipType);
+    m_industrialProcess = std::shared_ptr<IndustrialProcess>(&ipType);
 }
 
 void

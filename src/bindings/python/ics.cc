@@ -90,9 +90,6 @@ PYBIND11_MODULE(industrial_networks, m)
         .def(py::init<const char*>())
         .def(
             "_do_link_process",
-            static_cast<void(PlcApplication::*)(IndustrialProcessType)>(&PlcApplication::LinkProcess))
-        .def(
-            "_do_link_process",
             static_cast<void(PlcApplication::*)(std::shared_ptr<IndustrialProcess>)>(&PlcApplication::LinkProcess)
         )
         .def("get_address", &PlcApplication::GetAddress);
@@ -122,8 +119,6 @@ PYBIND11_MODULE(industrial_networks, m)
         .def("build_network", &IndustrialNetworkBuilder::BuildNetwork)
         .def("enable_pcap", &IndustrialNetworkBuilder::EnablePcap);
 
-    //py::class_<ns3::Address>(m, "Address");
-
     py::class_<ns3::Ipv4Address>(m, "Ipv4Address")
         .def(py::init<const char*>());
 
@@ -143,13 +138,21 @@ PYBIND11_MODULE(industrial_networks, m)
         .def("get_digital_state", &PlcState::GetDigitalState)
         .def("set_digital_state", &PlcState::SetDigitalState)
         .def("get_analog_state", &PlcState::GetAnalogState)
-        .def("set_analog_state", &PlcState::SetAnalogState);
+        .def("set_analog_state", py::overload_cast<uint8_t, const AnalogSensor&>(&PlcState::SetAnalogState))
+        .def("set_analog_state", py::overload_cast<uint8_t, double>(&PlcState::SetAnalogState));
 
-    /**
-     * Wrappers
-     */
+    py::class_<AnalogSensor>(m, "AnalogSensor")
+        .def(py::init<>())
+        .def(py::init<double, double>())
+        .def(py::init<double, double, double>())
+        .def("__iadd__", &AnalogSensor::operator+=)
+        .def("__isub__", &AnalogSensor::operator-=);
+
+    // Functions
     m.def("run_simulation", &RunSimulationWrapper);
 
     m.def("get_current_time", &GetCurrentTime);
+
+    m.def("scale_word_to_range", &DenormalizeU16InRange);
 }
 

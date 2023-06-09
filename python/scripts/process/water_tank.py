@@ -1,4 +1,4 @@
-from icsim.python.bindings.industrial_networks import IndustrialProcess, PlcState, get_current_time
+from icsim.python.bindings.industrial_networks import *
 
 """
 Simple Water Tank Industrial Process, the process is as follows:
@@ -38,7 +38,7 @@ class WaterTank(IndustrialProcess):
         self._define_input_positions()
 
         # State Variables
-        self.curr_height = 0
+        self.curr_height = AnalogSensor(0, 10)
         self.prev_time = 0
 
     """
@@ -61,7 +61,7 @@ class WaterTank(IndustrialProcess):
         self.prev_time = current;
 
         # Set height sensors (send data in mm)
-        state.set_analog_state(self.LEVEL_SENSOR, int(self.curr_height * 1000))
+        state.set_analog_state(self.LEVEL_SENSOR, self.curr_height)
 
         return state
 
@@ -71,7 +71,7 @@ class WaterTank(IndustrialProcess):
     we update the output of the PLC to some desired value
     """
     def UpdateState(self, measured, plc_out) -> PlcState:
-        height = measured.get_analog_state(self.LEVEL_SENSOR)
+        height = scale_word_to_range(measured.get_analog_state(self.LEVEL_SENSOR), 0, 10)
 
         pump_on = plc_out.get_digital_state(self.PUMP)
         valve_on = plc_out.get_digital_state(self.VALVE)

@@ -1,17 +1,9 @@
 #pragma once
 
-#include <iostream>
+#include "plc-state.h"
 
-#include "ns3/simulator.h"
 #include "ns3/nstime.h"
-
-struct PlcState;
-
-enum IndustrialProcessType
-{
-    WATER_TANK,
-    SEMAPHORE_LIGHT
-};
+#include "ns3/simulator.h"
 
 /**
  * An Industrial Process to be controlled by a PLC
@@ -21,26 +13,15 @@ enum IndustrialProcessType
  */
 class IndustrialProcess
 {
-public:
+  public:
     virtual ~IndustrialProcess() = default;
 
-    
-    // Updates the state of the PLC 
+    // Updates the state of the PLC
     virtual PlcState UpdateState(const PlcState& plcIn, PlcState plcOut) = 0;
 
     // Returns the updated measurements from the PLC
     virtual PlcState UpdateProcess(PlcState plcIn, const PlcState& plcOut) = 0;
 };
-
-// Positions for the sensors and actuators in the WaterTank process
-
-// SENSORS
-#define WT_LEVEL1 0x01
-#define WT_LEVEL2 0x02
-
-// ACTUATORS
-#define WT_PUMP 0x01
-#define WT_VALVE 0x02
 
 /**
  * A Water Tank system
@@ -49,46 +30,28 @@ public:
  */
 class WaterTank : public IndustrialProcess
 {
-public:
+  public:
+    // SENSORS
+    static constexpr double LEVEL_SENSOR_POS = 0;
+
+    // ACTUATORS
+    static constexpr uint8_t PUMP_POS = 0;
+    static constexpr uint8_t VALVE_POS = 1;
+
+    WaterTank();
     ~WaterTank() = default;
+
     PlcState UpdateState(const PlcState& plcIn, PlcState plcOut) override;
     PlcState UpdateProcess(PlcState plcIn, const PlcState& plcOut) override;
 
-private:
-    static constexpr float s_tankWidth = 1; // cross-sectional area of the tank
-    static constexpr float s_pumpFlow = 0.1; // 0.1 m/s = 10cm/s
-    static constexpr float s_valveFlow = 0.05; // 0.05 m/s = 5cm/s
-    static constexpr float s_level1 = 0.2; // lower level sensor height
-    static constexpr float s_level2 = 0.5; // higher level sensor height
+  private:
+    static constexpr float s_tankWidth = 1;    // cross-sectional area of the tank
+    static constexpr float s_pumpFlow = 1;   // 0.1 m/s = 10cm/s
+    static constexpr float s_valveFlow = 0.5; // 0.05 m/s = 5cm/s
+    static constexpr float s_level1 = 3.5;     // lower level sensor height
+    static constexpr float s_level2 = 8;     // higher level sensor height
 
     double m_prevTime;
-    float m_currHeight;
-};
-
-class SemaphoreLights : public IndustrialProcess
-{
-public:
-    PlcState UpdateState(const PlcState& plcIn, PlcState plcOut) override;
-    PlcState UpdateProcess(PlcState plcIn, const PlcState& plcOut) override;
-};
-
-/// Factory to build the default Industrial Processes
-class IndustrialProcessFactory
-{
-public:
-    static std::shared_ptr<IndustrialProcess> Create(IndustrialProcessType ipType)
-    {
-        switch (ipType)
-        {
-            case WATER_TANK:
-                return std::make_shared<WaterTank>();
-            
-            case SEMAPHORE_LIGHT:
-                return std::make_shared<SemaphoreLights>();
-            
-            default:
-                return nullptr;
-        }
-    }
+    AnalogSensor m_currHeight;
 };
 
