@@ -13,11 +13,8 @@
  */
 class IndustrialProcess
 {
-  public:
+public:
     virtual ~IndustrialProcess() = default;
-
-    // Updates the state of the PLC
-    virtual PlcState UpdateState(const PlcState& plcIn, PlcState plcOut) = 0;
 
     // Returns the updated measurements from the PLC
     virtual PlcState UpdateProcess(PlcState plcIn, const PlcState& plcOut) = 0;
@@ -30,7 +27,7 @@ class IndustrialProcess
  */
 class WaterTank : public IndustrialProcess
 {
-  public:
+public:
     // SENSORS
     static constexpr double LEVEL_SENSOR_POS = 0;
 
@@ -41,15 +38,12 @@ class WaterTank : public IndustrialProcess
     WaterTank();
     ~WaterTank() = default;
 
-    PlcState UpdateState(const PlcState& plcIn, PlcState plcOut) override;
     PlcState UpdateProcess(PlcState plcIn, const PlcState& plcOut) override;
 
-  private:
+private:
     static constexpr float s_tankWidth = 1;    // cross-sectional area of the tank
-    static constexpr float s_pumpFlow = 1;   // 0.1 m/s = 10cm/s
-    static constexpr float s_valveFlow = 0.5; // 0.05 m/s = 5cm/s
-    static constexpr float s_level1 = 3.5;     // lower level sensor height
-    static constexpr float s_level2 = 8;     // higher level sensor height
+    static constexpr float s_pumpFlow = 0.1;   // 0.1 m/s = 10cm/s
+    static constexpr float s_valveFlow = 0.05; // 0.05 m/s = 5cm/s
 
     double m_prevTime;
     AnalogSensor m_currHeight;

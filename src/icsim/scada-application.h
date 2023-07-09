@@ -47,7 +47,7 @@ public:
      *
      * Is expected to be overwritten, if not SCADA is used in read only mode if variables were defined
      */
-    virtual void Update(const std::map<std::string, Var>& vars);
+    virtual void Update(const std::map<std::string, Var>& vars) {}
     void Write(const std::map<std::string, uint16_t>& vars);
 
 protected:

@@ -180,9 +180,6 @@ ScadaApplication::HandleRead(ns3::Ptr<ns3::Socket> socket)
 }
 
 void
-ScadaApplication::Update(const std::map<std::string, Var>& vars) {}
-
-void
 ScadaApplication::DoUpdate()
 {
     Update(m_vars);

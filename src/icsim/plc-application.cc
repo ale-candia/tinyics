@@ -41,7 +41,7 @@ PlcApplication::PlcApplication(const char* name) : IndustrialApplication(name)
 PlcApplication::~PlcApplication()
 {
     m_socket = nullptr;
-    m_industrialProcess = nullptr;
+    m_IndustrialProcess = nullptr;
 }
 
 void
@@ -123,28 +123,28 @@ PlcApplication::HandleRead(ns3::Ptr<ns3::Socket> socket)
 void
 PlcApplication::LinkProcess(IndustrialProcess ipType)
 {
-    if (m_industrialProcess)
+    if (m_IndustrialProcess)
     {
         NS_FATAL_ERROR("Industrial Process Already Specified for PLC(" << this << ')');
     }
 
-    m_industrialProcess = std::shared_ptr<IndustrialProcess>(&ipType);
+    m_IndustrialProcess = std::shared_ptr<IndustrialProcess>(&ipType);
 }
 
 void
 PlcApplication::LinkProcess(std::shared_ptr<IndustrialProcess> ip)
 {
-    m_industrialProcess = ip;
+    m_IndustrialProcess = ip;
 }
 
 void
-PlcApplication::UpdateOutput()
+PlcApplication::DoUpdate()
 {
-    if (m_industrialProcess)
+    if (m_IndustrialProcess)
     {
         // Join these two together in industrial process and only make one call from here
-        m_in = m_industrialProcess->UpdateProcess(m_in, m_out);
-        m_out = m_industrialProcess->UpdateState(m_in, m_out);
+        m_in = m_IndustrialProcess->UpdateProcess(m_in, m_out);
+        m_out = Update(m_in, m_out);
     }
     else
     {
@@ -160,6 +160,6 @@ PlcApplication::UpdateOutput()
 void
 PlcApplication::ScheduleUpdate(ns3::Time dt)
 {
-    ns3::Simulator::Schedule(dt, &PlcApplication::UpdateOutput, this);
+    ns3::Simulator::Schedule(dt, &PlcApplication::DoUpdate, this);
 }
 

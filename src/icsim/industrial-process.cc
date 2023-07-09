@@ -8,32 +8,6 @@ WaterTank::WaterTank()
 }
 
 PlcState
-WaterTank::UpdateState(const PlcState& measured, PlcState plcOut)
-{
-    // The value returned by the PLC is a 16-bit value (called word) that 
-    // has to be denormalized into the actual physical value
-    double height = DenormalizeU16InRange(measured.GetAnalogState(LEVEL_SENSOR_POS), 0, 10);
-
-    bool pumpOn = plcOut.GetDigitalState(PUMP_POS);
-    bool valveOn = plcOut.GetDigitalState(VALVE_POS);
-
-    if (height > s_level2)
-    {
-        // Turn pump off and valve on
-        plcOut.SetDigitalState(PUMP_POS, false);
-        plcOut.SetDigitalState(VALVE_POS, true);
-    }
-    else if (height < s_level1)
-    {
-        // Turn pump on and valve off
-        plcOut.SetDigitalState(PUMP_POS, true);
-        plcOut.SetDigitalState(VALVE_POS, false);
-    }
-
-    return plcOut;
-}
-
-PlcState
 WaterTank::UpdateProcess(PlcState state, const PlcState& input)
 {
     auto current = ns3::Simulator::Now().ToDouble(ns3::Time::S);

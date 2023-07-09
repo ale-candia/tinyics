@@ -28,6 +28,16 @@ public:
     /// Link the PLC to and Industrial Process to control
     void LinkProcess(IndustrialProcess ip);
     void LinkProcess(std::shared_ptr<IndustrialProcess> ip);
+
+
+    /*
+     * Run the update/logic of the SCADA
+     *
+     * Is expected to be overwritten, if not SCADA is used in read only mode if variables were defined
+     */
+    virtual PlcState Update(PlcState measured, PlcState plc_out) { return plc_out; }
+    std::shared_ptr<IndustrialProcess> m_IndustrialProcess; //!< Industrial process being controlled by the PLC
+
 protected:
     void DoDispose() override;
 
@@ -57,7 +67,7 @@ private:
     void ScheduleUpdate(ns3::Time dt);
 
     /// Do the state update
-    void UpdateOutput();
+    void DoUpdate();
 
     static constexpr uint16_t s_port = 502;       //!< Port on which we listen for incoming packets
     ns3::Time m_interval;
@@ -65,7 +75,6 @@ private:
     ns3::Ptr<ns3::Socket> m_socket;  //!< IPv4 Socket
     PlcState m_in;       //!< State of the PLC input ports
     PlcState m_out;       //!< State of the PLC out ports
-    std::shared_ptr<IndustrialProcess> m_industrialProcess; //!< Industrial process being controlled by the PLC
     std::map<MB_FunctionCode, std::shared_ptr<RequestProcessor>> m_RequestProcessors;
 
     friend class IndustrialNetworkBuilder;

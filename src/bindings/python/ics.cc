@@ -11,16 +11,6 @@ namespace py = pybind11;
 class IndustrialProcessTrampoline : public IndustrialProcess
 {
 public:
-    PlcState UpdateState(const PlcState& measured, PlcState plc_out) override
-    {
-        PYBIND11_OVERLOAD_PURE(
-            PlcState,
-            IndustrialProcess,
-            UpdateState,
-            measured, plc_out
-        );
-    }
-
     /// Updates the state of the Process 
     PlcState UpdateProcess(PlcState state, const PlcState& input) override
     {
@@ -45,6 +35,22 @@ public:
             ScadaApplication,
             Update,
             vars
+        );
+    }
+};
+
+class PlcTrampoline : public PlcApplication
+{
+public:
+    PlcTrampoline(const char* name) : PlcApplication(name) {}
+
+    PlcState Update(PlcState measured, PlcState plc_out) override
+    {
+        PYBIND11_OVERLOAD(
+            PlcState,
+            PlcApplication,
+            Update,
+            measured, plc_out
         );
     }
 };
@@ -86,13 +92,15 @@ PYBIND11_MODULE(industrial_networks, m)
      */
     py::class_<IndustrialApplication, ns3::Ptr<IndustrialApplication>>(m, "IndustrialApplication");
 
-    py::class_<PlcApplication, IndustrialApplication, ns3::Ptr<PlcApplication>>(m, "_PlcBase")
+    py::class_<PlcApplication, IndustrialApplication, PlcTrampoline, ns3::Ptr<PlcApplication>>(m, "_PlcBase")
         .def(py::init<const char*>())
         .def(
             "_do_link_process",
             static_cast<void(PlcApplication::*)(std::shared_ptr<IndustrialProcess>)>(&PlcApplication::LinkProcess)
         )
-        .def("get_address", &PlcApplication::GetAddress);
+        .def("Update", &PlcApplication::Update)
+        .def("get_address", &PlcApplication::GetAddress)
+        .def_readwrite("process", &PlcApplication::m_IndustrialProcess);
 
     py::class_<ScadaApplication, IndustrialApplication, ScadaTrampoline, ns3::Ptr<ScadaApplication>>(m, "Scada")
         .def(py::init<const char*>())
@@ -127,7 +135,6 @@ PYBIND11_MODULE(industrial_networks, m)
 
     py::class_<IndustrialProcess, IndustrialProcessTrampoline, std::shared_ptr<IndustrialProcess>>(m, "IndustrialProcess")
         .def(py::init<>())
-        .def("update_state", &IndustrialProcess::UpdateState)
         .def("update_process", &IndustrialProcess::UpdateProcess);
     
     /**

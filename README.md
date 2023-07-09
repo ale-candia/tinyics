@@ -22,8 +22,8 @@ This command will compile the project. If you have multiple cores available, you
 
 Once the project has been successfully built, you should be able to use it with the following project structure:
 ```sh
-.
-└── icsim/
+you_project/
+├── icsim/
 └── your_file.py
 ```
 

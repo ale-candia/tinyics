@@ -4,11 +4,21 @@ We have a water tank process controlled by the plc_wt, a semaphore
 connected to the plc_s and a centralized SCADA system that can
 reads/write data to the PLCs using Modbus.
 
-The plc_s doesn't actually contain any logic but the SCADA is used
-to write to the PLC's output coils. With this we can simulate a distributed
-scenario with the SCADA as a centralized unit that reads data from a PLC
-controlling a process and updates the state of some other process that's
-not connected to the first one.
+The plc_s(semaphore) doesn't actually contain any logic, instead the SCADA
+is used to write to the PLC's output coils. With this we can simulate a
+distributed scenario with the SCADA as a centralized unit that reads data
+from a PLC controlling a process and updates the state of some other process
+that's not connected to the first one.
+
+         (SCADA)
+            |
+            |
+       +----+----+
+       |         |
+     (PLC)     (PLC)
+       |         |
+       |         |
+  Semaphore  Water Tank
 """
 from icsim import *
 
@@ -18,6 +28,7 @@ GENERATE_PLOT = True
 pump_light = []
 valve_light = []
 t_s = []
+
 """
 Define a semaphore Industrial Process.
 
@@ -39,14 +50,62 @@ class Semaphore(IndustrialProcess):
 
         return state
 
-    def UpdateState(self, measured, plc_out) -> PlcState:
-        # We don't update the PLC output in this process
+"""
+Define the logic for processes controlling the semaphore and the water tank
+"""
+class PlcS(Plc):
+    """
+    PLC controlling the semaphore
+    """
+    def __init__(self, name):
+        super().__init__(name)
+        self.link_process(Semaphore())
+
+    def Update(self, measured, plc_out) -> PlcState:
+        # For this example, the PLC itself is not updating the coil and
+        # turning on the lights. We use a remote command from the SCADA
+        # to update these, so there's no change in the PLC output done here.
+        return plc_out
+
+class PlcWT(Plc):
+    """
+    PLC controlling the water tank
+    """
+    level_down_height = 0.2;    # 0.2m minimum water level in the tank 
+    level_up_height = 0.5;      # 0.5m maximum water level in the tank
+
+    def __init__(self, name):
+        super().__init__(name)
+        self.link_process(process.WaterTank())
+
+    """
+    We get some measurements of the process and, according to those measurements,
+    we update the output of the PLC to some desired value
+    """
+    def Update(self, measured, plc_out) -> PlcState:
+        height = scale_word_to_range(measured.get_analog_state(self.process.LEVEL_SENSOR), 0, 10)
+
+        pump_on = plc_out.get_digital_state(self.process.PUMP)
+        valve_on = plc_out.get_digital_state(self.process.VALVE)
+
+        if height >= self.level_up_height:
+            # Turn pump off and valve on
+            plc_out.set_digital_state(self.process.PUMP, False);
+            plc_out.set_digital_state(self.process.VALVE, True);
+
+        elif not height >= self.level_down_height:
+            plc_out.set_digital_state(self.process.PUMP, True);
+            plc_out.set_digital_state(self.process.VALVE, False);
+        
         return plc_out
 
 
 tank_height = []
 t_wt = []
 
+"""
+SCADA logic
+"""
 class MyScada(Scada):
     def __init__(self, name):
         super().__init__(name)
@@ -65,13 +124,10 @@ class MyScada(Scada):
 
         self._write(output)
 
-
-water_tank = process.WaterTank()
+# Define the control system components
+plc_wt = PlcWT("water_control")
+plc_s = PlcS("semaphore")
 scada = MyScada("scada")
-
-# Define and link the processes to be controlled to their PLCs
-plc_wt = Plc("water_control").link_process(water_tank)
-plc_s = Plc("semaphore").link_process(Semaphore())
 
 # Construct the industrial network
 networkBuilder = IndustrialNetworkBuilder(Ipv4Address("192.168.1.0"), Ipv4Mask("255.255.255.0"))
@@ -84,9 +140,9 @@ networkBuilder.build_network()
 scada.add_rtu(plc_wt.get_address())
 scada.add_rtu(plc_s.get_address())
 
-scada.add_variable(plc_wt, "pump", VarType.Coil, water_tank.PUMP)
-scada.add_variable(plc_wt, "valve", VarType.Coil, water_tank.VALVE)
-scada.add_variable(plc_wt, "tank_height", VarType.InputRegister, water_tank.LEVEL_SENSOR)
+scada.add_variable(plc_wt, "pump", VarType.Coil, plc_wt.process.PUMP)
+scada.add_variable(plc_wt, "valve", VarType.Coil, plc_wt.process.VALVE)
+scada.add_variable(plc_wt, "tank_height", VarType.InputRegister, plc_wt.process.LEVEL_SENSOR)
 
 scada.add_variable(plc_s, "pump_light", VarType.Coil, Semaphore.PUMP_LIGHT_POS)
 scada.add_variable(plc_s, "valve_light", VarType.Coil, Semaphore.VALVE_LIGHT_POS)
