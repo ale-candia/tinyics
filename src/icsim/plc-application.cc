@@ -1,4 +1,4 @@
-#include "plc-application.h"
+#include "industrial-plant.h"
 #include "modbus.h"
 #include "utils.h"
 
@@ -18,7 +18,8 @@ PlcApplication::GetTypeId()
 
 PlcApplication::PlcApplication(const char* name) : IndustrialApplication(name)
 {
-    m_interval = ns3::Seconds(0.5);
+    IndustrialPlant::RegisterPLC(this);
+
     // Setup Modbus Responses (Can also be created dynamically/on demand if needed)
     m_RequestProcessors.insert(std::pair(
         MB_FunctionCode::ReadCoils,
@@ -75,8 +76,6 @@ PlcApplication::StartApplication()
         const ns3::Address&>(),
         MakeCallback(&PlcApplication::HandleAccept, this)
     );
-
-    ScheduleUpdate(ns3::Seconds(0.));
 }
 
 void
@@ -150,16 +149,5 @@ PlcApplication::DoUpdate()
     {
         NS_FATAL_ERROR("No industrial process specified for PLC: " << this->GetName());
     }
-    if (ns3::Simulator::Now() < m_stopTime)
-    {
-        m_step += m_interval;
-        ScheduleUpdate(m_step - ns3::Simulator::Now());
-    }
-}
-
-void
-PlcApplication::ScheduleUpdate(ns3::Time dt)
-{
-    ns3::Simulator::Schedule(dt, &PlcApplication::DoUpdate, this);
 }
 

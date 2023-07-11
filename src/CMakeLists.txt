@@ -2,6 +2,7 @@
 
 set(source_files
     icsim/industrial-network-builder.cc
+    icsim/industrial-plant.cc
     icsim/industrial-process.cc
     icsim/modbus.cc
     icsim/plc-application.cc

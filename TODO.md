@@ -1,6 +1,11 @@
 ### CURRENTLY WORKING ON
 
-- Add inheritance for the PLC to separate update loops
+- Does move semantics work for LinkProcess? This would remove the additinal wrapper
+  in python used to manage the object lifetime.
+
+- Add a base class for scheduled updates, as in SCADA and IndustrialPlant
+
+- Make industrial process again hidden in the PLC
 
 - Find a way of setting a global simulation time, i.e. a time at which all simulations end.
 

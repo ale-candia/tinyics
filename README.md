@@ -2,9 +2,13 @@
 
 To set up and compile the project, follow these steps:
 
-1. **Clone the repository:** use --recursive to include the dependencies
+1. **Clone the repository:** use --recursive to include the dependencies.
 ```sh
 git clone --recursive https://github.com/ale-candia/icsim.git
+```
+Or if you want to use it as a git submodule:
+```sh
+git submodule add https://github.com/ale-candia/icsim.git
 ```
 
 2. **Run the configuration script:** Navigate to the `icsim` directory and execute the configuration script using the following command:
@@ -24,6 +28,6 @@ Once the project has been successfully built, you should be able to use it with 
 ```sh
 you_project/
 ├── icsim/
-└── your_file.py
+└── your_file.py    # imports icsim
 ```
 
