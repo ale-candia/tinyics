@@ -31,6 +31,10 @@ you_project/
 └── your_file.py    # imports icsim
 ```
 
+## Getting started
+
+Check out the [tutorial](docs/tutorial.md) for an example.
+
 ## Unsuported features
 
 - PLC to PLC communication
