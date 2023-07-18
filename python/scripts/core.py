@@ -3,7 +3,7 @@ try:
     from ..bindings.industrial_networks import _PlcBase
 
 except ImportError:
-    raise ImportError("Error importings icsim, verify it has been built correctly")
+    raise ImportError("Error importings tinyics, verify it has been built correctly")
 
 """
 This Wrapper should be used so that we control the lifetime of the linked

@@ -1,12 +1,12 @@
 add_executable(example main.cc)
 
-target_link_libraries(example PRIVATE icssim)
+target_link_libraries(example PRIVATE tinyics)
 
 target_link_directories(example PRIVATE ${CMAKE_SOURCE_DIR}/build)
 
 target_include_directories(example PRIVATE
     ${CMAKE_SOURCE_DIR}/external/ns-3/build/include
-    ${CMAKE_SOURCE_DIR}/src/icsim
+    ${CMAKE_SOURCE_DIR}/src/tinyics
 )
 
 #### Cleaning up pcap files ####

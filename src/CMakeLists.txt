@@ -1,20 +1,20 @@
 #### Build ICS-SIM library ####
 
 set(source_files
-    icsim/industrial-network-builder.cc
-    icsim/industrial-plant.cc
-    icsim/industrial-process.cc
-    icsim/modbus.cc
-    icsim/plc-application.cc
-    icsim/plc-state.cc
-    icsim/scada-application.cc
-    icsim/utils.cc
-    icsim/modbus-command.cc
-    icsim/modbus-request.cc
-    icsim/modbus-response.cc
+    tinyics/industrial-network-builder.cc
+    tinyics/industrial-plant.cc
+    tinyics/industrial-process.cc
+    tinyics/modbus.cc
+    tinyics/plc-application.cc
+    tinyics/plc-state.cc
+    tinyics/scada-application.cc
+    tinyics/utils.cc
+    tinyics/modbus-command.cc
+    tinyics/modbus-request.cc
+    tinyics/modbus-response.cc
 )
 
-set(lib_name "icssim")
+set(lib_name "tinyics")
 
 add_library(${lib_name} SHARED ${source_files})
 
@@ -22,7 +22,7 @@ add_dependencies(${lib_name} libcore libcsma libinternet libnetwork)
 
 target_include_directories(${lib_name} PRIVATE
     ${CMAKE_SOURCE_DIR}/external/ns-3/build/include/
-    ${CMAKE_CURRENT_LIST_DIR}/icsim/icsim/
+    ${CMAKE_CURRENT_LIST_DIR}/tinyics/
 )
 
 target_link_directories(${lib_name} PRIVATE

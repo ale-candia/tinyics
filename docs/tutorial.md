@@ -31,13 +31,13 @@ Start by creating a new directory.
 mkdir bottle_filler
 cd bottle_filler
 ```
-Clone and build icsim.
+Clone and build tinyics.
 ```sh
 # clone the repository
-git clone --recursive https://github.com/ale-candia/icsim.git
+git clone --recursive https://github.com/ale-candia/tinyics.git
 
 # configure the build
-cd icsim
+cd tinyics
 bash config.sh
 
 # build the project (use -j n to use more cores during the build) 
@@ -57,7 +57,7 @@ Let's start by specifying the parameters of the process.
 
 ```python
 # file -> water_tank.py
-class WaterTank(icsim.IndustrialProcess):
+class WaterTank(tinyics.IndustrialProcess):
     TANK_BASE_AREA = 300        # base area of the water tank [cm2]
     INPUT_VALVE_FLOW = 0.5      # rate at which water enters the tank [L/s]
     OUTPUT_VALVE_FLOW = 0.03    # rate at which water exits the tank [L/s]
@@ -67,7 +67,7 @@ class WaterTank(icsim.IndustrialProcess):
 
         self.prev_time = 0
 
-        self.curr_height = icsim.AnalogSensor(0, 10)
+        self.curr_height = tinyics.AnalogSensor(0, 10)
 ```
 We use the `AnalogSensor` to measure the height since this is a continuous variable. The parameters 0 and 10 for the constructor are, respectively, the minimum and maximum value the sensor can measure, in our particular case we assume the sensor can measure height from 0 to 10 cm.
 
@@ -75,7 +75,7 @@ Now we specify where in the PLC the sensors and actuators go, we can do this by 
 
 ```python
 # file -> water_tank.py
-class PlcWaterTank(icsim.Plc):
+class PlcWaterTank(tinyics.Plc):
     # position of the sensors (inputs)
     LEVEL_SENSOR_POS = 0   # position 0 among analog inputs
 
@@ -103,7 +103,7 @@ With that in place we can go ahead and override the `Update()` method in the `Pl
 def Update(self, measured, plc_out):
 
     # current height of the tank
-    height = icsim.scale_word_to_range(
+    height = tinyics.scale_word_to_range(
         measured.get_analog_state(self.LEVEL_SENSOR_POS), 0, 10)
 
     # if we reached the max height, stop filling the tank
@@ -115,7 +115,7 @@ def Update(self, measured, plc_out):
         plc_out.set_digital_state(self.INPUT_VALVE_POS, True)
 ```
 
-Note that we're using the `icsim.scale_word_to_range()` function in the range 0, 10. This is because PLC inputs are actually stored as a 2 byte representation of the actual float value in the range specified by the sensor constructor. So we need to scale it back to this range in order to get the actual height of the water level.
+Note that we're using the `tinyics.scale_word_to_range()` function in the range 0, 10. This is because PLC inputs are actually stored as a 2 byte representation of the actual float value in the range specified by the sensor constructor. So we need to scale it back to this range in order to get the actual height of the water level.
 
 From here we override the `UpdateProcess()` method inside the `WaterTank` class to specify the logic for updating the state of the process and the sensor measurements.
 
@@ -123,7 +123,7 @@ From here we override the `UpdateProcess()` method inside the `WaterTank` class 
 # file -> water_tank.py
 
 def UpdateProcess(self, measurements, input):
-    current = icsim.get_current_time()
+    current = tinyics.get_current_time()
     elapsed_time = current - self.prev_time
 
     input_valve_on = input.get_digital_state(PlcWaterTank.INPUT_VALVE_POS)
@@ -168,7 +168,7 @@ Now we can complete the `UpdateProcess()` method.
 ```python
 # file -> water_tank.py
 def UpdateProcess(self, measurements, input):
-    current = icsim.get_current_time()
+    current = tinyics.get_current_time()
     elapsed_time = current - self.prev_time
 
     input_valve_on = input.get_digital_state(PlcWaterTank.INPUT_VALVE_POS)
@@ -202,7 +202,7 @@ For the industrial process.
 
 ```python
 # file -> bottle_filler.py
-class BottleFiller(icsim.IndustrialProcess):
+class BottleFiller(tinyics.IndustrialProcess):
     BOTTLE_HEIGHT = 20      # height of the bottle is [cm]
     BOTTLE_BASE_AREA = 100  # base area of the water bottle [cm2]
     CONVEYOR_SPEED = 0.05   # how fast the conveyor belt moves when activated [m/s]
@@ -215,7 +215,7 @@ class BottleFiller(icsim.IndustrialProcess):
         self.bottle_distance_to_tap = 0
 
         # an analog sensor that measures height of the water bottle
-        self.bottle_water_level = icsim.AnalogSensor(0, 20)
+        self.bottle_water_level = tinyics.AnalogSensor(0, 20)
 ```
 
 Here, `bottle_water_level` is an `AnalogSensor` but `bottle_distance_to_tap` isn't. This is because we are not 'measuring' the `bottle_distance_to_tap`, this is only a local variable we use to compute the physics of the process, similar to the prev_time (previous time step). `bottle_distance_to_tap` is used to compute how much distance has the previous bottle travelled. We assume that bottles are equally spaced from each other.
@@ -224,7 +224,7 @@ For the PLC.
 
 ```python
 # file -> bottle_filler.py
-class PlcBottle(icsim.Plc):
+class PlcBottle(tinyics.Plc):
     # position of the sensors (inputs)
     BOTTLE_LEVEL_POS = 0        # position 0 among analog inputs
     BOTTLE_DETECTED_POS = 0     # position 0 among digital inputs
@@ -247,7 +247,7 @@ We can now go ahead and override the `Update()` method for the `PlcBottle` class
 ```python
 # file -> bottle_filler.py
 def Update(self, measured, plc_out):
-    bottle_level = icsim.scale_word_to_range(
+    bottle_level = tinyics.scale_word_to_range(
         measured.get_analog_state(self.BOTTLE_LEVEL_POS), 0, 20)
 
     if measured.get_digital_state(self.BOTTLE_DETECTED_POS):
@@ -275,7 +275,7 @@ Now let's override the `UpdateProcess()` method for the `BottleFiller` class.
 ```python
 # file -> bottle_filler.py
 def UpdateProcess(self, measurements, input):
-    current = icsim.get_current_time()
+    current = tinyics.get_current_time()
     elapsed_time = current - self.prev_time
 
     #### update position of the water bottle in the conveyor ####
@@ -330,10 +330,10 @@ We can update this value from the `WaterTank` class according to wether there is
 
 ```python
 #file -> water_tank.py
-class WaterTank(icsim.IndustrialProcess):
+class WaterTank(tinyics.IndustrialProcess):
     # code
 
-    def UpdateProcess(self, measurements, input) -> icsim.PlcState:
+    def UpdateProcess(self, measurements, input) -> tinyics.PlcState:
         # code
         
         if amount <= 0:
@@ -365,7 +365,7 @@ def generate_plot(scada):
     plt.grid()
     plt.show()
 
-class MyScada(icsim.Scada):
+class MyScada(tinyics.Scada):
     def __init__(self, name):
         super().__init__(name)
 
@@ -374,8 +374,8 @@ class MyScada(icsim.Scada):
 
     def Update(self, vars):
         # lets measure the tank height and store it in an array
-        self.tank_height.append(icsim.scale_word_to_range(vars["tank_height"].get_value(), 0, 10))
-        self.t.append(icsim.get_current_time())
+        self.tank_height.append(tinyics.scale_word_to_range(vars["tank_height"].get_value(), 0, 10))
+        self.t.append(tinyics.get_current_time())
 
     def get_height():
         return self.tank_height
@@ -389,9 +389,9 @@ plc_bf = PlcBottle("bf")
 scada = MyScada("scada")
 
 # Construct the industrial network
-networkBuilder = icsim.IndustrialNetworkBuilder(
-        icsim.Ipv4Address("192.168.1.0"),
-        icsim.Ipv4Mask("255.255.255.0"))
+networkBuilder = tinyics.IndustrialNetworkBuilder(
+        tinyics.Ipv4Address("192.168.1.0"),
+        tinyics.Ipv4Mask("255.255.255.0"))
 
 networkBuilder.add_to_network(scada)
 networkBuilder.add_to_network(plc_wt)
@@ -402,13 +402,13 @@ networkBuilder.build_network()
 scada.add_rtu(plc_wt.get_address())
 scada.add_rtu(plc_bf.get_address())
 
-scada.add_variable(plc_wt, "tank_height", icsim.VarType.InputRegister, plc_wt.LEVEL_SENSOR_POS)
-scada.add_variable(plc_bf, "bottle_level", icsim.VarType.InputRegister, plc_bf.BOTTLE_LEVEL_POS)
+scada.add_variable(plc_wt, "tank_height", tinyics.VarType.InputRegister, plc_wt.LEVEL_SENSOR_POS)
+scada.add_variable(plc_bf, "bottle_level", tinyics.VarType.InputRegister, plc_bf.BOTTLE_LEVEL_POS)
 
 # networkBuilder.enable_pcap("sim")
 
 # Run the simulation
-icsim.run_simulation()
+tinyics.run_simulation()
 generate_plot(scada)
 ```
 

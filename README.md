@@ -4,16 +4,16 @@ To set up and compile the project, follow these steps:
 
 1. **Clone the repository:** use --recursive to include the dependencies.
 ```sh
-git clone --recursive https://github.com/ale-candia/icsim.git
+git clone --recursive https://github.com/ale-candia/tinyics.git
 ```
 Or if you want to use it as a git submodule:
 ```sh
-git submodule add https://github.com/ale-candia/icsim.git
+git submodule add https://github.com/ale-candia/tinyics.git
 ```
 
-2. **Run the configuration script:** Navigate to the `icsim` directory and execute the configuration script using the following command:
+2. **Run the configuration script:** Navigate to the `tinyics` directory and execute the configuration script using the following command:
 ```sh
-cd icsim
+cd tinyics
 bash config.sh
 ```
 
@@ -27,8 +27,8 @@ This command will compile the project. If you have multiple cores available, you
 Once the project has been successfully built, you should be able to use it with the following project structure:
 ```sh
 you_project/
-├── icsim/
-└── your_file.py    # imports icsim
+├── tinyics/
+└── your_file.py    # imports tinyics
 ```
 
 ## Getting started

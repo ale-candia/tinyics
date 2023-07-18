@@ -20,7 +20,7 @@ that's not connected to the first one.
        |         |
   Semaphore  Water Tank
 """
-from icsim import *
+from tinyics import *
 
 GENERATE_PCAP_FILE = False
 GENERATE_PLOT = True

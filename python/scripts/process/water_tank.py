@@ -1,4 +1,4 @@
-from icsim.python.bindings.industrial_networks import *
+from tinyics.python.bindings.industrial_networks import *
 
 """
 Simple Water Tank Industrial Process, the process is as follows:
