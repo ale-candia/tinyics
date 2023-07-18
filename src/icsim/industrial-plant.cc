@@ -16,13 +16,20 @@ IndustrialPlant::RegisterPLC(PlcApplication *plc)
 }
 
 void
+IndustrialPlant::RegisterProcess(IndustrialProcess *process)
+{
+    InitPlant();
+    s_Instance->m_Processes.push_back(process);
+}
+
+void
 IndustrialPlant::InitPlant()
 {
     if(s_Instance)
         return;
 
     s_Instance = new IndustrialPlant();
-    s_Instance->m_interval = ns3::Seconds(0.5);
+    s_Instance->m_Interval = ns3::MilliSeconds(50);
 
     ScheduleUpdate(ns3::Seconds(0.));
 }
@@ -30,13 +37,46 @@ IndustrialPlant::InitPlant()
 void
 IndustrialPlant::DoUpdate()
 {
+    /*
+     * We can use another data structure that stays sorted when inserted
+     * to avoid this step.
+     */
+    if (!m_Sorted)
+        Sort();
+
+    for (auto process : m_Processes)
+        if (process) process->DoUpdate();
+
     for (auto plc : m_Plcs)
         if (plc) plc->DoUpdate();
 
     if (ns3::Simulator::Now() < ns3::Seconds(20.0))
     {
-        m_step += m_interval;
-        ScheduleUpdate(m_step - ns3::Simulator::Now());
+        m_Step += m_Interval;
+        ScheduleUpdate(m_Step - ns3::Simulator::Now());
     }
+}
+
+void
+IndustrialPlant::Sort()
+{
+
+    /*
+     * Only Industrial Processes are sorted since PLC logics are independent
+     */
+    struct
+    {
+        bool operator()(IndustrialProcess* a, IndustrialProcess* b) const
+        {
+            if (a && b)
+                return a->GetPriority() > b->GetPriority();
+
+            return false;
+        }
+    } GreaterThan;
+
+    std::sort(m_Processes.begin(), m_Processes.end(), GreaterThan);
+
+    m_Sorted = true;
 }
 

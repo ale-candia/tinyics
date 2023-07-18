@@ -12,6 +12,8 @@ class IndustrialPlant
 public:
     static void RegisterPLC(PlcApplication *plc);
 
+    static void RegisterProcess(IndustrialProcess *process);
+
 private:
     IndustrialPlant() = default;
 
@@ -24,10 +26,14 @@ private:
 
     void DoUpdate();
 
+    void Sort();
+
     static IndustrialPlant *s_Instance;
 
+    std::vector<IndustrialProcess*> m_Processes;
     std::vector<PlcApplication*> m_Plcs;
-    ns3::Time m_interval;
-    ns3::Time m_step = ns3::Seconds(0.0);
+    ns3::Time m_Interval;
+    ns3::Time m_Step = ns3::Seconds(0.0);
+    bool m_Sorted;
 };
 

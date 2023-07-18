@@ -120,34 +120,15 @@ PlcApplication::HandleRead(ns3::Ptr<ns3::Socket> socket)
 }
 
 void
-PlcApplication::LinkProcess(IndustrialProcess ipType)
-{
-    if (m_IndustrialProcess)
-    {
-        NS_FATAL_ERROR("Industrial Process Already Specified for PLC(" << this << ')');
-    }
-
-    m_IndustrialProcess = std::shared_ptr<IndustrialProcess>(&ipType);
-}
-
-void
-PlcApplication::LinkProcess(std::shared_ptr<IndustrialProcess> ip)
+PlcApplication::LinkProcess(std::shared_ptr<IndustrialProcess> ip, uint8_t priority)
 {
     m_IndustrialProcess = ip;
+    m_IndustrialProcess->LinkPLC(priority, &m_in, &m_out);
 }
 
 void
 PlcApplication::DoUpdate()
 {
-    if (m_IndustrialProcess)
-    {
-        // Join these two together in industrial process and only make one call from here
-        m_in = m_IndustrialProcess->UpdateProcess(m_in, m_out);
-        m_out = Update(m_in, m_out);
-    }
-    else
-    {
-        NS_FATAL_ERROR("No industrial process specified for PLC: " << this->GetName());
-    }
+    Update(&m_in, &m_out);
 }
 

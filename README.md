@@ -31,3 +31,6 @@ you_project/
 └── your_file.py    # imports icsim
 ```
 
+## Unsuported features
+
+- PLC to PLC communication

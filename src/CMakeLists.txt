@@ -6,6 +6,7 @@ set(source_files
     icsim/industrial-process.cc
     icsim/modbus.cc
     icsim/plc-application.cc
+    icsim/plc-state.cc
     icsim/scada-application.cc
     icsim/utils.cc
     icsim/modbus-command.cc

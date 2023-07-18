@@ -22,12 +22,11 @@ public:
      * returns the object TypeId
      */
     static ns3::TypeId GetTypeId();
-    PlcApplication(const char* name);
+    PlcApplication(const char *name);
     ~PlcApplication() override;
 
     /// Link the PLC to and Industrial Process to control
-    void LinkProcess(IndustrialProcess ip);
-    void LinkProcess(std::shared_ptr<IndustrialProcess> ip);
+    void LinkProcess(std::shared_ptr<IndustrialProcess> ip, uint8_t priority = 0);
 
 
     /*
@@ -36,8 +35,7 @@ public:
      * Is expected to be overwritten, if not SCADA is used in read only mode
      * if variables were defined
      */
-    virtual PlcState Update(PlcState measured, PlcState plc_out) { return plc_out; }
-    std::shared_ptr<IndustrialProcess> m_IndustrialProcess; //!< process being controlled
+    virtual void Update(const PlcState *measured, PlcState *plc_out) {}
 
 protected:
     void DoDispose() override;
@@ -66,6 +64,7 @@ private:
     PlcState m_in;       //!< State of the PLC input ports
     PlcState m_out;       //!< State of the PLC out ports
     std::map<MB_FunctionCode, std::shared_ptr<RequestProcessor>> m_RequestProcessors;
+    std::shared_ptr<IndustrialProcess> m_IndustrialProcess; //!< process being controlled
 
     friend class IndustrialNetworkBuilder;
     friend class IndustrialPlant;

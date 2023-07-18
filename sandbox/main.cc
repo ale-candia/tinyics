@@ -31,15 +31,65 @@
 #include "industrial-process.h"
 #include "industrial-network-builder.h"
 
+/**
+ * A Water Tank system
+ *
+ * It contains two level sensors, a pump and a valve
+ */
+class WaterTank : public IndustrialProcess
+{
+public:
+    // SENSORS
+    static constexpr double LEVEL_SENSOR_POS = 0;
+
+    // ACTUATORS
+    static constexpr uint8_t PUMP_POS = 0;
+    static constexpr uint8_t VALVE_POS = 1;
+
+    WaterTank()
+    {
+        m_currHeight = AnalogSensor(0, 10);
+    }
+    ~WaterTank() = default;
+
+    void UpdateProcess(PlcState* state, const PlcState* input) override
+    {
+        auto current = ns3::Simulator::Now().ToDouble(ns3::Time::S);
+
+        bool pupmOn = input->GetDigitalState(PUMP_POS);
+        bool valveOn = input->GetDigitalState(VALVE_POS);
+
+        if (pupmOn)
+        {
+            m_currHeight += s_pumpFlow * (current - m_prevTime) / s_tankWidth;
+        }
+        if (valveOn)
+        {
+            m_currHeight -= s_valveFlow * (current - m_prevTime) / s_tankWidth;
+        }
+
+        m_prevTime = current;
+
+        // update level sensor
+        state->SetAnalogState(LEVEL_SENSOR_POS, m_currHeight);
+    }
+
+private:
+    static constexpr float s_tankWidth = 1;    // cross-sectional area of the tank
+    static constexpr float s_pumpFlow = 0.1;   // 0.1 m/s = 10cm/s
+    static constexpr float s_valveFlow = 0.05; // 0.05 m/s = 5cm/s
+
+    double m_prevTime;
+    AnalogSensor m_currHeight;
+};
+
+
 class Semaphore : public IndustrialProcess
 {
 public:
     Semaphore() {}
 
-    PlcState UpdateProcess(PlcState state, const PlcState& input) override
-    {
-        return state;
-    }
+    void UpdateProcess(PlcState* state, const PlcState* input) override {}
 
     static constexpr uint8_t PUMP_LIGHT_POS = 0;
     static constexpr uint8_t VALVE_LIGHT_POS = 1;
@@ -56,11 +106,6 @@ public:
     {
         this->LinkProcess(std::make_shared<Semaphore>());
     }
-
-    PlcState Update(PlcState measured, PlcState plcOut) override
-    {
-        return plcOut;
-    }
 };
 
 class PlcWaterTank : public PlcApplication
@@ -71,29 +116,27 @@ public:
         this->LinkProcess(std::make_shared<WaterTank>());
     }
 
-    PlcState Update(PlcState measured, PlcState plcOut) override
+    void Update(const PlcState *measured, PlcState *plcOut) override
     {
         // The value returned by the PLC is a 16-bit value (called word) that 
         // has to be denormalized into the actual physical value
-        double height = DenormalizeU16InRange(measured.GetAnalogState(WaterTank::LEVEL_SENSOR_POS), 0, 10);
+        double height = DenormalizeU16InRange(measured->GetAnalogState(WaterTank::LEVEL_SENSOR_POS), 0, 10);
 
-        bool pumpOn = plcOut.GetDigitalState(WaterTank::PUMP_POS);
-        bool valveOn = plcOut.GetDigitalState(WaterTank::VALVE_POS);
+        bool pumpOn = plcOut->GetDigitalState(WaterTank::PUMP_POS);
+        bool valveOn = plcOut->GetDigitalState(WaterTank::VALVE_POS);
 
         if (height > s_level_up)
         {
             // Turn pump off and valve on
-            plcOut.SetDigitalState(WaterTank::PUMP_POS, false);
-            plcOut.SetDigitalState(WaterTank::VALVE_POS, true);
+            plcOut->SetDigitalState(WaterTank::PUMP_POS, false);
+            plcOut->SetDigitalState(WaterTank::VALVE_POS, true);
         }
         else if (height < s_level_down)
         {
             // Turn pump on and valve off
-            plcOut.SetDigitalState(WaterTank::PUMP_POS, true);
-            plcOut.SetDigitalState(WaterTank::VALVE_POS, false);
+            plcOut->SetDigitalState(WaterTank::PUMP_POS, true);
+            plcOut->SetDigitalState(WaterTank::VALVE_POS, false);
         }
-
-        return plcOut;
     }
 
 private:

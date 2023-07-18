@@ -57,7 +57,11 @@ double
 NormalizeInRange(double value, double min, double max)
 {
     if (value < min or value > max)
-        NS_FATAL_ERROR("Linearly mapped value should be in the specified range");
+    {
+        NS_FATAL_ERROR(
+                "Linearly mapped value should be in the specified range. Called with "
+                << value << ", " << min << ", " << max);
+    }
 
     return (value - min) / (max - min);
 }

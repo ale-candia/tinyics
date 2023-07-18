@@ -20,9 +20,9 @@ class Plc(_PlcBase):
     its lifetime. We also return self so that this can be
     used as Plc("name").link_proces(process)
     """
-    def link_process(self, ip):
+    def link_process(self, ip, priority = 0):
         self.__process = ip
-        self._do_link_process(ip)
+        self._do_link_process(ip, priority)
 
         return self
 

@@ -23,19 +23,6 @@
 
 - Make address vector in scada efficient for find and inserts
 
-- Wrap Industrial process so that users don't have to define them as
-    ```python
-    def UpdateState(self, measured, plc_out) -> PlcState:
-        return plc_out
-    ```
-  Since PlcState is of complex type, we can do something like
-    ```python
-    def UpdateState(self, measured, plc_out) -> PlcState:
-        update_state(self, measured, plc_out)
-        return plc_out
-    ```
-  And the changes made by the user will be reflected in place in the `plc_out` object
-
 - Set modifiable network speeds
 
 ### LOWER PRIORITY

@@ -42,6 +42,45 @@ public:
         return *this;
     }
 
+    AnalogSensor& operator*=(double val)
+    {
+        m_Value *= val;
+        return *this;
+    }
+
+    /*
+     * Comparison operators for double
+     */
+    bool operator==(const double& b) const
+    {
+        return m_Value == b;
+    }
+
+    bool operator!=(const double& b) const
+    {
+        return m_Value != b;
+    }
+
+    bool operator<(const double& b) const
+    {
+        return m_Value < b;
+    }
+
+    bool operator>(const double& b) const
+    {
+        return m_Value > b;
+    }
+
+    bool operator<=(const double& b) const
+    {
+        return m_Value <= b;
+    }
+
+    bool operator>=(const double& b) const
+    {
+        return m_Value >= b;
+    }
+
     /*
      * Returns the value of the measured input in the range 4-20mA
      */
@@ -71,7 +110,7 @@ public:
      * Set the measured value, the original value measured by the sensor (could
      * represent temperature, presion, etc.)
      */
-    void SetMeasurement(double value)
+    void SetValue(double value)
     {
         m_Value = value;
     }

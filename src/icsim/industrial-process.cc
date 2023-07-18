@@ -1,34 +1,27 @@
 #include "industrial-process.h"
+#include "industrial-plant.h"
 
 #include "ns3/nstime.h"
 
-WaterTank::WaterTank()
+void
+IndustrialProcess::DoUpdate()
 {
-    m_currHeight = AnalogSensor(0, 10);
+    UpdateProcess(m_Measurements, m_Input);
 }
 
-PlcState
-WaterTank::UpdateProcess(PlcState state, const PlcState& input)
+void
+IndustrialProcess::LinkPLC(uint8_t priority, PlcState *measurement, const PlcState *input)
 {
-    auto current = ns3::Simulator::Now().ToDouble(ns3::Time::S);
+    m_Priority = priority;
+    m_Measurements = measurement;
+    m_Input = input;
 
-    bool pupmOn = input.GetDigitalState(PUMP_POS);
-    bool valveOn = input.GetDigitalState(VALVE_POS);
+    IndustrialPlant::RegisterProcess(this);
+}
 
-    if (pupmOn)
-    {
-        m_currHeight += s_pumpFlow * (current - m_prevTime) / s_tankWidth;
-    }
-    if (valveOn)
-    {
-        m_currHeight -= s_valveFlow * (current - m_prevTime) / s_tankWidth;
-    }
-
-    m_prevTime = current;
-
-    // update level sensor
-    state.SetAnalogState(LEVEL_SENSOR_POS, m_currHeight);
-
-    return state;
+uint8_t
+IndustrialProcess::GetPriority() const
+{
+    return m_Priority;
 }
 

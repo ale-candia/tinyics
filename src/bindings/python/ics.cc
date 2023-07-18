@@ -12,10 +12,10 @@ class IndustrialProcessTrampoline : public IndustrialProcess
 {
 public:
     /// Updates the state of the Process 
-    PlcState UpdateProcess(PlcState state, const PlcState& input) override
+    void UpdateProcess(PlcState *state, const PlcState *input) override
     {
         PYBIND11_OVERLOAD_PURE(
-            PlcState,
+            void,
             IndustrialProcess,
             UpdateProcess,
             state, input
@@ -26,7 +26,7 @@ public:
 class ScadaTrampoline : public ScadaApplication
 {
 public:
-    ScadaTrampoline(const char* name) : ScadaApplication(name) {}
+    ScadaTrampoline(const char *name) : ScadaApplication(name) {}
 
     void Update(const std::map<std::string, Var>& vars) override
     {
@@ -42,12 +42,12 @@ public:
 class PlcTrampoline : public PlcApplication
 {
 public:
-    PlcTrampoline(const char* name) : PlcApplication(name) {}
+    PlcTrampoline(const char *name) : PlcApplication(name) {}
 
-    PlcState Update(PlcState measured, PlcState plc_out) override
+    void Update(const PlcState *measured, PlcState *plc_out) override
     {
         PYBIND11_OVERLOAD(
-            PlcState,
+            void,
             PlcApplication,
             Update,
             measured, plc_out
@@ -96,11 +96,10 @@ PYBIND11_MODULE(industrial_networks, m)
         .def(py::init<const char*>())
         .def(
             "_do_link_process",
-            static_cast<void(PlcApplication::*)(std::shared_ptr<IndustrialProcess>)>(&PlcApplication::LinkProcess)
+            static_cast<void(PlcApplication::*)(std::shared_ptr<IndustrialProcess>, uint8_t)>(&PlcApplication::LinkProcess)
         )
         .def("Update", &PlcApplication::Update)
-        .def("get_address", &PlcApplication::GetAddress)
-        .def_readwrite("process", &PlcApplication::m_IndustrialProcess);
+        .def("get_address", &PlcApplication::GetAddress);
 
     py::class_<ScadaApplication, IndustrialApplication, ScadaTrampoline, ns3::Ptr<ScadaApplication>>(m, "Scada")
         .def(py::init<const char*>())
@@ -152,8 +151,17 @@ PYBIND11_MODULE(industrial_networks, m)
         .def(py::init<>())
         .def(py::init<double, double>())
         .def(py::init<double, double, double>())
+        .def("get_value", &AnalogSensor::GetValue)
+        .def("set_value", &AnalogSensor::SetValue)
         .def("__iadd__", &AnalogSensor::operator+=)
-        .def("__isub__", &AnalogSensor::operator-=);
+        .def("__isub__", &AnalogSensor::operator-=)
+        .def("__imul__", &AnalogSensor::operator*=)
+        .def("__eq__", &AnalogSensor::operator==)
+        .def("__ne__", &AnalogSensor::operator!=)
+        .def("__lt__", &AnalogSensor::operator<)
+        .def("__gt__", &AnalogSensor::operator>)
+        .def("__le__", &AnalogSensor::operator<=)
+        .def("__ge__", &AnalogSensor::operator>=);
 
     // Functions
     m.def("run_simulation", &RunSimulationWrapper);
