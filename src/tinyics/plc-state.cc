@@ -1,5 +1,7 @@
 #include "plc-state.h"
 
+#include <limits>
+
 void
 PlcState::SetDigitalState(uint8_t pos, bool value)
 {

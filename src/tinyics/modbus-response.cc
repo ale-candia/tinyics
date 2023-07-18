@@ -1,5 +1,7 @@
 #include "modbus-response.h"
 
+#include <cmath>
+
 void
 DigitalReadResponse::Execute(const ModbusADU& adu, const std::vector<Var*>& vars, uint16_t start) const
 {

@@ -2,6 +2,8 @@
 
 #include <ns3/fatal-error.h>
 
+#include <limits>
+
 std::tuple<uint8_t, uint8_t>
 SplitUint16(uint16_t value)
 {
