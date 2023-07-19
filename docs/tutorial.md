@@ -57,6 +57,8 @@ Let's start by specifying the parameters of the process.
 
 ```python
 # file -> water_tank.py
+import tinyics
+
 class WaterTank(tinyics.IndustrialProcess):
     TANK_BASE_AREA = 300        # base area of the water tank [cm2]
     INPUT_VALVE_FLOW = 0.5      # rate at which water enters the tank [L/s]
@@ -156,7 +158,7 @@ Second, notice that there is no way for us to know whether the output valve is o
 We can create a new file for these global variables.
 
 ```python
-# file -> global.py
+# file -> globals.py
 class GlobalParams:
     # whether the draining valve is on (set by the PLC controlling
     # the bottle filler)
@@ -167,6 +169,9 @@ Now we can complete the `UpdateProcess()` method.
 
 ```python
 # file -> water_tank.py
+from globals import GlobalParams # import GlobalParams
+
+# water tank class
 def UpdateProcess(self, measurements, input):
     current = tinyics.get_current_time()
     elapsed_time = current - self.prev_time
@@ -202,6 +207,9 @@ For the industrial process.
 
 ```python
 # file -> bottle_filler.py
+import tinyics
+from globals import GlobalParams
+
 class BottleFiller(tinyics.IndustrialProcess):
     BOTTLE_HEIGHT = 20      # height of the bottle is [cm]
     BOTTLE_BASE_AREA = 100  # base area of the water bottle [cm2]
@@ -316,7 +324,7 @@ def UpdateProcess(self, measurements, input):
 Again, we don't have access to the `TANK_OUTPUT_FLOW` from our method, we could import the `WaterTank` class into this file and do `WaterTank.OUTPUT_VALVE_FLOW`. However, the issue with doing this is that the tank could be empty at some point. In that scenario the output flow would be zero. So we can define a new global variable and use that instead.
 
 ```python
-# file -> global.py
+# file -> globals.py
 class GlobalParams:
     # rate at which water leaves the tank
     TANK_OUTPUT_FLOW = 0
@@ -357,6 +365,10 @@ amount += GlobalParams.TANK_OUTPUT_FLOW * elapsed_time
 Now we can build the simulation by importing our PLCs into a main file and running the simulation.
 
 ```python
+import tinyics
+from bottle_filler import PlcBottle 
+from water_tank import PlcWaterTank 
+
 def generate_plot(scada):
     import matplotlib.pyplot as plt
 
@@ -377,10 +389,10 @@ class MyScada(tinyics.Scada):
         self.tank_height.append(tinyics.scale_word_to_range(vars["tank_height"].get_value(), 0, 10))
         self.t.append(tinyics.get_current_time())
 
-    def get_height():
+    def get_height(self):
         return self.tank_height
     
-    def get_t():
+    def get_t(self):
         return self.t
 
 # Define the control system components

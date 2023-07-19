@@ -6,10 +6,6 @@ To set up and compile the project, follow these steps:
 ```sh
 git clone --recursive https://github.com/ale-candia/tinyics.git
 ```
-Or if you want to use it as a git submodule:
-```sh
-git submodule add https://github.com/ale-candia/tinyics.git
-```
 
 2. **Run the configuration script:** Navigate to the `tinyics` directory and execute the configuration script using the following command:
 ```sh

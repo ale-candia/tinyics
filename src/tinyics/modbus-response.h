@@ -1,3 +1,5 @@
+#pragma once
+
 #include "modbus.h"
 #include "utils.h"
 #include "variables.h"

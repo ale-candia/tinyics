@@ -1,3 +1,5 @@
+#pragma once
+
 #include "modbus.h"
 
 #include "ns3/socket.h"
