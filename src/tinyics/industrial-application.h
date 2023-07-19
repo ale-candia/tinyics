@@ -31,7 +31,8 @@ protected:
 private:
     std::string m_name;
 
-    inline void SetAddress(ns3::Ipv4Address addr) {
+    inline void SetAddress(ns3::Ipv4Address addr)
+    {
         m_appIpv4Address = addr;
     }
 

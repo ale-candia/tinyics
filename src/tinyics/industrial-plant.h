@@ -14,6 +14,8 @@ public:
 
     static void RegisterProcess(IndustrialProcess *process);
 
+    static void SetRefreshRate(uint64_t rate);
+
 private:
     IndustrialPlant() = default;
 

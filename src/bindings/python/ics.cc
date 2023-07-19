@@ -1,5 +1,7 @@
 #include "industrial-process.h"
 #include "industrial-network-builder.h"
+#include "industrial-plant.h"
+#include "scada-application.h"
 
 #include <pybind11/pybind11.h>
 #include <pybind11/functional.h>
@@ -26,7 +28,7 @@ public:
 class ScadaTrampoline : public ScadaApplication
 {
 public:
-    ScadaTrampoline(const char *name) : ScadaApplication(name) {}
+    ScadaTrampoline(const char *name, uint64_t rate = 500) : ScadaApplication(name, rate) {}
 
     void Update(const std::map<std::string, Var>& vars) override
     {
@@ -56,8 +58,9 @@ public:
 };
 
 void
-RunSimulationWrapper()
+RunSimulationWrapper(double time = 20.0)
 {
+    ns3::Simulator::Stop(ns3::Seconds(time));
     ns3::Simulator::Run();
     ns3::Simulator::Destroy();
 }
@@ -87,9 +90,6 @@ PYBIND11_MODULE(industrial_networks, m)
 {
     py::doc("Library for simulating industrial control systems networks");
 
-    /**
-     * SCADA and PLC
-     */
     py::class_<IndustrialApplication, ns3::Ptr<IndustrialApplication>>(m, "IndustrialApplication");
 
     py::class_<PlcApplication, IndustrialApplication, PlcTrampoline, ns3::Ptr<PlcApplication>>(m, "_PlcBase")
@@ -103,10 +103,12 @@ PYBIND11_MODULE(industrial_networks, m)
 
     py::class_<ScadaApplication, IndustrialApplication, ScadaTrampoline, ns3::Ptr<ScadaApplication>>(m, "Scada")
         .def(py::init<const char*>())
+        .def(py::init<const char*, uint64_t>())
         .def("add_variable", static_cast<void (ScadaApplication::*)(const ns3::Ptr<PlcApplication>&, const std::string&, VarType, uint8_t)>(&ScadaApplication::AddVariable))
         .def("add_rtu", py::overload_cast<ns3::Ipv4Address>(&ScadaApplication::AddRTU))
         .def("Update", &ScadaApplication::Update)
-        .def("_write", &ScadaApplication::Write);
+        .def("_write", &ScadaApplication::Write)
+        .def("set_refresh_rate", &ScadaApplication::SetRefreshRate);
 
     py::enum_<VarType>(m, "VarType")
         .value("Coil", VarType::Coil)
@@ -117,9 +119,6 @@ PYBIND11_MODULE(industrial_networks, m)
         .def("get_value", &Var::GetValue)
         .def("set_value", &Var::SetValue);
 
-    /**
-     * Industrial Network Builder
-     */
     py::class_<IndustrialNetworkBuilder>(m, "IndustrialNetworkBuilder")
         .def(py::init<ns3::Ipv4Address, ns3::Ipv4Mask>())
         .def("add_to_network", &IndustrialNetworkBuilder::AddToNetwork)
@@ -136,9 +135,6 @@ PYBIND11_MODULE(industrial_networks, m)
         .def(py::init<>())
         .def("update_process", &IndustrialProcess::UpdateProcess);
     
-    /**
-     * PlcState
-     */
     py::class_<PlcState>(m, "PlcState")
         .def(py::init<>())
         .def("get_digital_state", &PlcState::GetDigitalState)
@@ -163,8 +159,11 @@ PYBIND11_MODULE(industrial_networks, m)
         .def("__le__", &AnalogSensor::operator<=)
         .def("__ge__", &AnalogSensor::operator>=);
 
+    py::class_<IndustrialPlant>(m, "IndustrialPlant")
+        .def("set_refresh_rate", &IndustrialPlant::SetRefreshRate);
+
     // Functions
-    m.def("run_simulation", &RunSimulationWrapper);
+    m.def("run_simulation", &RunSimulationWrapper, py::arg("time") = 20.0);
 
     m.def("get_current_time", &GetCurrentTime);
 

@@ -29,7 +29,7 @@ public:
      */
     static ns3::TypeId GetTypeId();
 
-    ScadaApplication(const char* name);
+    ScadaApplication(const char* name, double rate = 500);
 
     ~ScadaApplication() override;
 
@@ -49,6 +49,8 @@ public:
      */
     virtual void Update(const std::map<std::string, Var>& vars) {}
     void Write(const std::map<std::string, uint16_t>& vars);
+
+    void SetRefreshRate(uint64_t rate);
 
 protected:
     void DoDispose() override;
@@ -86,15 +88,14 @@ private:
     void HandleRead(ns3::Ptr<ns3::Socket> socket);
     void FreeSockets();
 
-    ns3::Time m_interval;                           //!< Packet inter-send time
-    ns3::Time m_step;                           //!< Packet inter-send time
-    std::vector<ns3::Ptr<ns3::Socket>> m_sockets;   //!< Socket per RTU
-    std::vector<ns3::Address> m_peerAddresses;      //!< Address per RTU
-    bool m_started;                                 //!< Whether the app has already started
-    uint16_t m_transactionId;                       //!< TransactionId for the Modbus ADU
+    ns3::Time m_Interval;                           //!< Packet inter-send time
+    ns3::Time m_Step;                           //!< Packet inter-send time
+    std::vector<ns3::Ptr<ns3::Socket>> m_Sockets;   //!< Socket per RTU
+    std::vector<ns3::Address> m_PeerAddresses;      //!< Address per RTU
+    uint16_t m_TransactionId;                       //!< TransactionId for the Modbus ADU
     uint16_t m_PendingPackets = 0;
     std::vector<std::map<MB_FunctionCode, ReadCommand>> m_ReadCommands; //!< Commands to execute for each RTU
-    std::map<std::string, Var> m_vars;
+    std::map<std::string, Var> m_Vars;
     std::map<MB_FunctionCode, std::shared_ptr<ResponseProcessor>> m_ResponseProcessors;
     std::list<WriteCommand> m_WriteCommands;
 

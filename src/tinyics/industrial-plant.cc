@@ -9,6 +9,13 @@ IndustrialPlant::ScheduleUpdate(ns3::Time dt)
 }
 
 void
+IndustrialPlant::SetRefreshRate(uint64_t rate)
+{
+    InitPlant();
+    s_Instance->m_Interval = ns3::MilliSeconds(rate);
+}
+
+void
 IndustrialPlant::RegisterPLC(PlcApplication *plc)
 {
     InitPlant();
@@ -50,11 +57,8 @@ IndustrialPlant::DoUpdate()
     for (auto plc : m_Plcs)
         if (plc) plc->DoUpdate();
 
-    if (ns3::Simulator::Now() < ns3::Seconds(20.0))
-    {
-        m_Step += m_Interval;
-        ScheduleUpdate(m_Step - ns3::Simulator::Now());
-    }
+    m_Step += m_Interval;
+    ScheduleUpdate(m_Step - ns3::Simulator::Now());
 }
 
 void

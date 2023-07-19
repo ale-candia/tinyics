@@ -59,10 +59,10 @@ private:
     /// Do the state update
     void DoUpdate();
 
-    static constexpr uint16_t s_port = 502; //!< Port on which we listen for incoming packets
-    ns3::Ptr<ns3::Socket> m_socket;  //!< IPv4 Sockets
-    PlcState m_in;       //!< State of the PLC input ports
-    PlcState m_out;       //!< State of the PLC out ports
+    static constexpr uint16_t s_Port = 502; //!< Port on which we listen for incoming packets
+    ns3::Ptr<ns3::Socket> m_Socket;  //!< IPv4 Sockets
+    PlcState m_In;       //!< State of the PLC input ports
+    PlcState m_Out;       //!< State of the PLC out ports
     std::map<MB_FunctionCode, std::shared_ptr<RequestProcessor>> m_RequestProcessors;
     std::shared_ptr<IndustrialProcess> m_IndustrialProcess; //!< process being controlled
 

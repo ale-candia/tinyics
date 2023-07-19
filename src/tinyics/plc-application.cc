@@ -41,7 +41,7 @@ PlcApplication::PlcApplication(const char* name) : IndustrialApplication(name)
 
 PlcApplication::~PlcApplication()
 {
-    m_socket = nullptr;
+    m_Socket = nullptr;
     m_IndustrialProcess = nullptr;
 }
 
@@ -54,24 +54,22 @@ PlcApplication::DoDispose()
 void
 PlcApplication::StartApplication()
 {
-    m_stopTime = ns3::Seconds(20.0);
-
-    if (!m_socket)
+    if (!m_Socket)
     {
         // Create TCP socket
         ns3::TypeId tid = ns3::TypeId::LookupByName("ns3::TcpSocketFactory");
-        m_socket = ns3::Socket::CreateSocket(GetNode(), tid);
+        m_Socket = ns3::Socket::CreateSocket(GetNode(), tid);
 
         // Bind the socket to the local address
-        ns3::InetSocketAddress local = ns3::InetSocketAddress(ns3::Ipv4Address::GetAny(), s_port);
-        if (m_socket->Bind(local) == -1)
+        ns3::InetSocketAddress local = ns3::InetSocketAddress(ns3::Ipv4Address::GetAny(), s_Port);
+        if (m_Socket->Bind(local) == -1)
         {
             NS_FATAL_ERROR("Failed to bind socket");
         }
     }
 
-    m_socket->Listen();
-    m_socket->SetAcceptCallback(
+    m_Socket->Listen();
+    m_Socket->SetAcceptCallback(
         ns3::MakeNullCallback<bool, ns3::Ptr<ns3::Socket>,
         const ns3::Address&>(),
         MakeCallback(&PlcApplication::HandleAccept, this)
@@ -81,10 +79,10 @@ PlcApplication::StartApplication()
 void
 PlcApplication::StopApplication()
 {
-    if (m_socket)
+    if (m_Socket)
     {
-        m_socket->Close();
-        m_socket->SetRecvCallback(ns3::MakeNullCallback<void, ns3::Ptr<ns3::Socket>>());
+        m_Socket->Close();
+        m_Socket->SetRecvCallback(ns3::MakeNullCallback<void, ns3::Ptr<ns3::Socket>>());
     }
 }
 
@@ -110,10 +108,10 @@ PlcApplication::HandleRead(ns3::Ptr<ns3::Socket> socket)
                 if (fc == MB_FunctionCode::ReadCoils || fc == MB_FunctionCode::WriteSingleCoil)
                 {
                     if (m_RequestProcessors.at(fc))
-                        m_RequestProcessors.at(fc)->Execute(socket, from, adu, m_out);
+                        m_RequestProcessors.at(fc)->Execute(socket, from, adu, m_Out);
                 }
                 else
-                    m_RequestProcessors.at(fc)->Execute(socket, from, adu, m_in);
+                    m_RequestProcessors.at(fc)->Execute(socket, from, adu, m_In);
             }
         }
     }
@@ -123,12 +121,12 @@ void
 PlcApplication::LinkProcess(std::shared_ptr<IndustrialProcess> ip, uint8_t priority)
 {
     m_IndustrialProcess = ip;
-    m_IndustrialProcess->LinkPLC(priority, &m_in, &m_out);
+    m_IndustrialProcess->LinkPLC(priority, &m_In, &m_Out);
 }
 
 void
 PlcApplication::DoUpdate()
 {
-    Update(&m_in, &m_out);
+    Update(&m_In, &m_Out);
 }
 

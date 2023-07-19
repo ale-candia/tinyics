@@ -10,15 +10,20 @@ ScadaApplication::GetTypeId()
     return tid;
 }
 
-ScadaApplication::ScadaApplication(const char* name) : IndustrialApplication(name)
+ScadaApplication::ScadaApplication(const char* name, double rate) : IndustrialApplication(name)
 {
-    m_started = false;
-    m_interval = ns3::Seconds(0.5);
+    SetRefreshRate(rate);
 
     m_ResponseProcessors.insert(std::pair(MB_FunctionCode::ReadCoils, std::make_shared<DigitalReadResponse>()));                                            
     m_ResponseProcessors.insert(std::pair(MB_FunctionCode::ReadDiscreteInputs, m_ResponseProcessors.at(MB_FunctionCode::ReadCoils)));
     m_ResponseProcessors.insert(std::pair(MB_FunctionCode::ReadInputRegisters, std::make_shared<RegisterReadResponse>()));
     m_ResponseProcessors.insert(std::pair(MB_FunctionCode::WriteSingleCoil, std::make_shared<WriteCoilResponse>()));
+}
+
+void
+ScadaApplication::SetRefreshRate(uint64_t rate)
+{
+    m_Interval = ns3::MilliSeconds(rate);
 }
 
 ScadaApplication::~ScadaApplication()
@@ -29,7 +34,7 @@ ScadaApplication::~ScadaApplication()
 void
 ScadaApplication::FreeSockets()
 {
-    for (auto socket : m_sockets)
+    for (auto socket : m_Sockets)
     {
         socket = nullptr;
     }
@@ -38,7 +43,7 @@ ScadaApplication::FreeSockets()
 void
 ScadaApplication::AddRTU(ns3::Ipv4Address addr)
 {
-    m_peerAddresses.push_back(addr);
+    m_PeerAddresses.push_back(addr);
     m_ReadCommands.push_back(std::map<MB_FunctionCode, ReadCommand>());
 }
 
@@ -51,16 +56,8 @@ ScadaApplication::DoDispose()
 void
 ScadaApplication::StartApplication()
 {
-    if (m_started)
-    {
-        std::cerr << "[WARNING] SCADA application was attempted to start twice\n";
-        return;
-    }
-    m_started = true;
-    m_stopTime = ns3::Seconds(20.0);
-
     // Setup communication with each remote terminal unit
-    for (const ns3::Address& address : m_peerAddresses)
+    for (const ns3::Address& address : m_PeerAddresses)
     {
         // Create a socket
         auto tid = ns3::TypeId::LookupByName("ns3::TcpSocketFactory");
@@ -82,7 +79,7 @@ ScadaApplication::StartApplication()
         socket->SetRecvCallback(MakeCallback(&ScadaApplication::HandleRead, this));
         socket->SetAllowBroadcast(true);
 
-        m_sockets.push_back(socket);
+        m_Sockets.push_back(socket);
     }
 
     ScheduleRead(ns3::Seconds(0.));
@@ -91,7 +88,7 @@ ScadaApplication::StartApplication()
 void
 ScadaApplication::StopApplication()
 {
-    for (auto socket : m_sockets)
+    for (auto socket : m_Sockets)
     {
         socket->Close();
         socket->SetRecvCallback(ns3::MakeNullCallback<void, ns3::Ptr<ns3::Socket>>());
@@ -108,24 +105,21 @@ void
 ScadaApplication::SendAll()
 {
     std::vector<int> sock;
-    for (int i = 0; i < m_sockets.size(); i++)
+    for (int i = 0; i < m_Sockets.size(); i++)
     {
-        auto socket = m_sockets[i];
+        auto socket = m_Sockets[i];
 
         for (const auto& command : m_ReadCommands[i])
         {
-            command.second.Execute(socket, m_transactionId, i+1);
-            m_transactionId++;
+            command.second.Execute(socket, m_TransactionId, i+1);
+            m_TransactionId++;
             m_PendingPackets++;
         }
 
     }
 
-    if (ns3::Simulator::Now() < m_stopTime)
-    {
-        m_step += m_interval;
-        ScheduleRead(m_step - ns3::Simulator::Now());
-    }
+    m_Step += m_Interval;
+    ScheduleRead(m_Step - ns3::Simulator::Now());
 }
 
 /**
@@ -160,7 +154,7 @@ ScadaApplication::HandleRead(ns3::Ptr<ns3::Socket> socket)
                 std::vector<Var*> vars;
 
                 // Update variables of the same function code and in the same RTU
-                for (auto& var : m_vars)
+                for (auto& var : m_Vars)
                 {
                     if (type == var.second.GetType() && var.second.GetUID() == adu.GetUnitID())
                         vars.push_back(&var.second);
@@ -182,17 +176,17 @@ ScadaApplication::HandleRead(ns3::Ptr<ns3::Socket> socket)
 void
 ScadaApplication::DoUpdate()
 {
-    Update(m_vars);
+    Update(m_Vars);
 
     // After executing the reads and updating variables we execute the writes
     for (auto it = m_WriteCommands.begin(); it != m_WriteCommands.end();)
     {
-        auto socket = m_sockets[it->GetUID() - 1];
+        auto socket = m_Sockets[it->GetUID() - 1];
 
-        it->Execute(socket, m_transactionId);
+        it->Execute(socket, m_TransactionId);
         it = m_WriteCommands.erase(it);
 
-        m_transactionId++;
+        m_TransactionId++;
     }
 }
 
@@ -209,13 +203,13 @@ ScadaApplication::AddVariable(
     int idx = GetRTUIndex(plc->GetAddress());
 
     // If the variable is already registered then, ignore this one
-    if (m_vars.find(name) != m_vars.end())
+    if (m_Vars.find(name) != m_Vars.end())
     {
         std::clog << "Variable " << name << " already defined, ignoring all future instances\n";
         return;
     }
 
-    m_vars.insert(std::pair(name, Var(type, pos, idx+1)));
+    m_Vars.insert(std::pair(name, Var(type, pos, idx+1)));
 
     /* Build a command to send the appropriate request */
 
@@ -233,11 +227,11 @@ ScadaApplication::AddVariable(
 int
 ScadaApplication::GetRTUIndex(const ns3::Address& rtuAddr)
 {
-    auto it = std::find(m_peerAddresses.begin(), m_peerAddresses.end(), rtuAddr);
-    if (it == m_peerAddresses.end())
+    auto it = std::find(m_PeerAddresses.begin(), m_PeerAddresses.end(), rtuAddr);
+    if (it == m_PeerAddresses.end())
         NS_FATAL_ERROR("No RTU with address: '" << rtuAddr << "' in SCADA '" << GetName() << '\'');
 
-    return it - m_peerAddresses.begin();
+    return it - m_PeerAddresses.begin();
 }
 
 void
@@ -246,9 +240,9 @@ ScadaApplication::Write(const std::map<std::string, uint16_t> &vars)
     // Create write commands if needed
     for (auto& var : vars)
     {
-        if (m_vars.find(var.first) != m_vars.end())
+        if (m_Vars.find(var.first) != m_Vars.end())
         {
-            const Var& original = m_vars.at(var.first);
+            const Var& original = m_Vars.at(var.first);
 
             // Only write to Coils and Holding Registers (Currently Not Implemented)
             // Only write if the value changed
