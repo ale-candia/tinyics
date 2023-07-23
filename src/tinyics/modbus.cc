@@ -57,15 +57,15 @@ ModbusADU::GetModbusADUs(const ns3::Ptr<ns3::Packet>& packet)
     // Start and finish of a single Modbus ADU
     uint16_t start=0, finish;
 
-    // While the data stream is large enough to read the lenght field
+    // While the data stream is large enough to read the length field
     while (start + LENGTH_FIELD_POS + 1 < dataStreamSize)
     {
-        uint16_t lenght = CombineUint8(
+        uint16_t length = CombineUint8(
             dataStream[start + LENGTH_FIELD_POS],
             dataStream[start + LENGTH_FIELD_POS + 1]
         );
 
-        finish = (start + MB_BASE_SZ + lenght - 2) - 1;
+        finish = (start + MB_BASE_SZ + length - 2) - 1;
 
         if (finish < dataStreamSize)
         {
@@ -144,7 +144,7 @@ ModbusADU::SetLengthField(uint16_t length)
         NS_FATAL_ERROR("Called SetTransactionId with an empty byte buffer");
     }
 
-    // Load the Lenght Field
+    // Load the length Field
     auto [higher, lower] = SplitUint16(length);
 
     m_Bytes[LENGTH_FIELD_POS] = higher;

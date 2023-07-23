@@ -44,7 +44,7 @@ RegisterReadResponse::Execute(const ModbusADU& adu, const std::vector<Var*>& var
 
     for (auto var : vars)
     {
-        // Indicates the place of the Hight byte for the variable
+        // Indicates the place of the height byte for the variable
         uint8_t pos = var->GetPosition() - start;
 
         if (pos > byte_count / 2) return;

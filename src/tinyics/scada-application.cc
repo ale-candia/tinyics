@@ -123,7 +123,7 @@ ScadaApplication::SendAll()
 }
 
 /**
- * Here we should decode the incomming data to affect the ScadaApplication's state
+ * Here we should decode the incoming data to affect the ScadaApplication's state
  */
 void
 ScadaApplication::HandleRead(ns3::Ptr<ns3::Socket> socket)

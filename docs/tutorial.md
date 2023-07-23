@@ -259,7 +259,7 @@ def Update(self, measured, plc_out):
         measured.get_analog_state(self.BOTTLE_LEVEL_POS), 0, 20)
 
     if measured.get_digital_state(self.BOTTLE_DETECTED_POS):
-        # if the bottle is in place and still not completelly filled, then open
+        # if the bottle is in place and still not completely filled, then open
         # the valve to pour water and stop the conveyor belt
         if bottle_level >= 0 and bottle_level < self.MAX_BOTTLE_LEVEL:
             plc_out.set_digital_state(self.VALVE_POS, True)
@@ -334,7 +334,7 @@ class GlobalParams:
     OUTPUT_VALVE_ON = False
 ```
 
-We can update this value from the `WaterTank` class according to wether there is or not water in the tank at one particular moment.
+We can update this value from the `WaterTank` class according to whether there is or not water in the tank at one particular moment.
 
 ```python
 #file -> water_tank.py

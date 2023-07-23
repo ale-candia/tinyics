@@ -1,6 +1,6 @@
 ### CURRENTLY WORKING ON
 
-- Does move semantics work for LinkProcess? This would remove the additinal wrapper
+- Does move semantics work for LinkProcess? This would remove the additional wrapper
   in python used to manage the object lifetime.
 
 - Add a base class for scheduled updates, as in SCADA and IndustrialPlant
