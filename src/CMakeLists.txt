@@ -18,7 +18,7 @@ set(lib_name "tinyics")
 
 add_library(${lib_name} SHARED ${source_files})
 
-add_dependencies(${lib_name} libcore libcsma libinternet libnetwork)
+add_dependencies(${lib_name} libcsma libinternet)
 
 target_include_directories(${lib_name} PRIVATE
     ${CMAKE_SOURCE_DIR}/external/ns-3/build/include/
@@ -30,9 +30,7 @@ target_link_directories(${lib_name} PRIVATE
 )
 
 target_link_libraries(${lib_name}
-    libcore
     libcsma
     libinternet
-    libnetwork
 )
 

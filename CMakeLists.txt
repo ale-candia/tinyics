@@ -20,6 +20,8 @@ endif()
 
 #### Sub directories ####
 
+set(NS3_ENABLED_MODULES "csma;internet") # ns-3 modules to build
+
 add_subdirectory(external/ns-3)
 add_subdirectory(external/pybind11)
 add_subdirectory(src/bindings)
