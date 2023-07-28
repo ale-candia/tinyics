@@ -71,9 +71,9 @@ class WaterTank(tinyics.IndustrialProcess):
 
         self.curr_height = tinyics.AnalogSensor(0, 10)
 ```
-We use the `AnalogSensor` to measure the height since this is a continuous variable. The parameters 0 and 10 for the constructor are, respectively, the minimum and maximum value the sensor can measure, in our particular case we assume the sensor can measure height from 0 to 10 cm.
+We use the `AnalogSensor` to measure the height since this is a continuous variable. The parameters 0 and 10 for the constructor are, respectively, the minimum and maximum values the sensor can measure, in our particular case we assume the sensor can measure the height from 0 to 10 cm.
 
-Now we specify where in the PLC the sensors and actuators go, we can do this by defining constants in the PLC.
+Now we specify where the sensors and actuators go, we can do this by defining constants in the PLC.
 
 ```python
 # file -> water_tank.py
@@ -94,11 +94,11 @@ class PlcWaterTank(tinyics.Plc):
         self.link_process(WaterTank(), 1) # link a water tank process to the PLC
 ```
 
-Here we specified that the level sensor (continuous variable) will be connected to the first of the analog inputs of the PLC (position 0). Similarly the valve actuator will be connected to the first of the digital outputs. `MAX_HEIGHT` and `MIN_HEIGHT` are program constants that specify the range in which we want to maintain the level of the water in the tank. We've also linked the plc to a new instance of the `WaterTank` indsutrial process so we don't have to do that in our main program.
+Here we specified that the level sensor (continuous variable) will be connected to the first of the analog inputs of the PLC (position 0). Similarly, the valve actuator will be connected to the first of the digital outputs. `MAX_HEIGHT` and `MIN_HEIGHT` are program constants that specify the range in which we want to maintain the water level in the tank. We've also linked the plc to a new instance of the `WaterTank` industrial process so we don't have to do that in our main program.
 
-To ensure proper execution, we used the `self.link_process()` method with a priority of 1 for the water tank process. This grants it higher priority over the bottle filling process, establishing a dependency. The water tank process must execute first, as we need to check water availability before filling bottles.
+To ensure proper execution, we used the `self.link_process()` method with a priority of 1 for the water tank process. This grants it higher priority over the bottle-filling process, establishing a dependency. The water tank process must execute first, as we need to check water availability before filling bottles.
 
-With that in place we can go ahead and override the `Update()` method in the `PlcWaterTank` to specify the control logic for the PLC.
+With that in place, we can go ahead and override the `Update()` method in the `PlcWaterTank` to specify the control logic for the PLC.
 
 ```python
 # file -> water_tank.py
@@ -117,7 +117,7 @@ def Update(self, measured, plc_out):
         plc_out.set_digital_state(self.INPUT_VALVE_POS, True)
 ```
 
-Note that we're using the `tinyics.scale_word_to_range()` function in the range 0, 10. This is because PLC inputs are actually stored as a 2 byte representation of the actual float value in the range specified by the sensor constructor. So we need to scale it back to this range in order to get the actual height of the water level.
+Note that we're using the `tinyics.scale_word_to_range()` function in the range 0, 10. This is because PLC inputs are actually stored as a 2-byte representation of the actual float value in the range specified by the sensor constructor. So we need to scale it back to this range in order to get the actual height of the water level.
 
 From here we override the `UpdateProcess()` method inside the `WaterTank` class to specify the logic for updating the state of the process and the sensor measurements.
 
@@ -151,9 +151,9 @@ def UpdateProcess(self, measurements, input):
     measurements.set_analog_state(PlcWaterTank.LEVEL_SENSOR_POS, self.curr_height)
 ```
 
-A couple of things to notice here. First, notice that we're using the `get_value()` and `set_value()` on `self.curr_height` to get and set the current height. It's important to use these function because if we were to do something like `self.curr_height = 0` we would be turning `self.curr_height` into an integer, which will make the function `measurements.set_analog_state()` fail since it expects an analog sensor.
+A couple of things to notice here. First, notice that we're using the `get_value()` and `set_value()` on `self.curr_height` to get and set the current height. It's important to use these functions because if we were to do something like `self.curr_height = 0` we would be turning `self.curr_height` into an integer, which will make the function `measurements.set_analog_state()` fail since it expects an analog sensor.
 
-Second, notice that there is no way for us to know whether the output valve is open or not, since this valve is controlled by the PLC controlling the bottle process. In order to get access to this information we will need to define a global variable so that we can share this information.
+Second, notice that there is no way for us to know whether the output valve is open or not since this valve is controlled by the PLC controlling the bottle-filling process. In order to get access to this information we will need to define a global variable so that we can share this information.
 
 We can create a new file for these global variables.
 
@@ -201,7 +201,7 @@ def UpdateProcess(self, measurements, input):
 
 ## Bottle Filling Process
 
-Now let's start the same way for the bottle filling process, defining the connections and constants both in the process and the PLC.
+Now let's start the same way for the bottle-filling process, defining the connections and constants both in the process and the PLC.
 
 For the industrial process.
 
@@ -222,11 +222,11 @@ class BottleFiller(tinyics.IndustrialProcess):
         self.prev_time = 0
         self.bottle_distance_to_tap = 0
 
-        # an analog sensor that measures height of the water bottle
+        # an analog sensor that measures the height of the water in the bottle
         self.bottle_water_level = tinyics.AnalogSensor(0, 20)
 ```
 
-Here, `bottle_water_level` is an `AnalogSensor` but `bottle_distance_to_tap` isn't. This is because we are not 'measuring' the `bottle_distance_to_tap`, this is only a local variable we use to compute the physics of the process, similar to the prev_time (previous time step). `bottle_distance_to_tap` is used to compute how much distance has the previous bottle travelled. We assume that bottles are equally spaced from each other.
+Here, `bottle_water_level` is an `AnalogSensor` but `bottle_distance_to_tap` isn't. This is because we are not 'measuring' the `bottle_distance_to_tap`, this is only a local variable we use to compute the physics of the process, similar to the prev_time (previous time step). `bottle_distance_to_tap` is used to compute how much distance has the previous bottle traveled. We assume that bottles are equally spaced from each other.
 
 For the PLC.
 
@@ -321,7 +321,7 @@ def UpdateProcess(self, measurements, input):
     measurements.set_analog_state(PlcBottle.BOTTLE_LEVEL_POS, self.bottle_water_level)
 ```
 
-Again, we don't have access to the `TANK_OUTPUT_FLOW` from our method, we could import the `WaterTank` class into this file and do `WaterTank.OUTPUT_VALVE_FLOW`. However, the issue with doing this is that the tank could be empty at some point. In that scenario the output flow would be zero. So we can define a new global variable and use that instead.
+Again, we don't have access to the `TANK_OUTPUT_FLOW` from our method, we could import the `WaterTank` class into this file and do `WaterTank.OUTPUT_VALVE_FLOW`. However, the issue with doing this is that the tank could be empty at some point. In that scenario, the output flow would be zero. So we can define a new global variable and use that instead.
 
 ```python
 # file -> globals.py
@@ -334,7 +334,7 @@ class GlobalParams:
     OUTPUT_VALVE_ON = False
 ```
 
-We can update this value from the `WaterTank` class according to whether there is or not water in the tank at one particular moment.
+We can update this value from the `WaterTank` class according to whether there is or isn't water in the tank at one particular moment.
 
 ```python
 #file -> water_tank.py
@@ -385,7 +385,7 @@ class MyScada(tinyics.Scada):
         self.t = []
 
     def Update(self, vars):
-        # lets measure the tank height and store it in an array
+        # measure the tank height and store it in an array
         self.tank_height.append(tinyics.scale_word_to_range(vars["tank_height"].get_value(), 0, 10))
         self.t.append(tinyics.get_current_time())
 
@@ -430,6 +430,6 @@ generate_plot(scada)
 ---
 **NOTE**
 
-With graphs, the sampling time should be consider. The SCADA usually has higher sampling time than the PLC and if the process changes to rapidly relative to this sampling time, it might be better to take measurements during the physics (`IndustrialProcess` class) simulation if the objective is to get a more precise graph of the process.
+With graphs, the sampling time should be considered. The SCADA usually has a higher sampling time than the PLC and if the process changes too rapidly relative to this sampling time, it might be better to take measurements during the physics (`IndustrialProcess` class) simulation if the objective is to get a more precise graph of the process.
 
 ---
