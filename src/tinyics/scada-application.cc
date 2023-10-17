@@ -82,7 +82,7 @@ ScadaApplication::StartApplication()
         m_Sockets.push_back(socket);
     }
 
-    ScheduleRead(ns3::Seconds(0.));
+    ScheduleRead();
 }
 
 void
@@ -96,9 +96,11 @@ ScadaApplication::StopApplication()
     }
 }
 
-void ScadaApplication::ScheduleRead(ns3::Time dt)
+void
+ScadaApplication::ScheduleRead()
 {
-    ns3::Simulator::Schedule(dt, &ScadaApplication::SendAll, this);
+    m_Step += m_Interval;
+    ns3::Simulator::Schedule(m_Step - ns3::Simulator::Now(), &ScadaApplication::SendAll, this);
 }
 
 void
@@ -118,8 +120,7 @@ ScadaApplication::SendAll()
 
     }
 
-    m_Step += m_Interval;
-    ScheduleRead(m_Step - ns3::Simulator::Now());
+    ScheduleRead();
 }
 
 /**

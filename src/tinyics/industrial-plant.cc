@@ -3,9 +3,13 @@
 IndustrialPlant *IndustrialPlant::s_Instance = nullptr;
 
 void
-IndustrialPlant::ScheduleUpdate(ns3::Time dt)
+IndustrialPlant::ScheduleUpdate()
 {
-    ns3::Simulator::Schedule(dt, &IndustrialPlant::DoUpdate, s_Instance);
+    if (s_Instance)
+    {
+        s_Instance->m_Step += s_Instance->m_Interval;
+        ns3::Simulator::Schedule(s_Instance->m_Step - ns3::Simulator::Now(), &IndustrialPlant::DoUpdate, s_Instance);
+    }
 }
 
 void
@@ -38,7 +42,7 @@ IndustrialPlant::InitPlant()
     s_Instance = new IndustrialPlant();
     s_Instance->m_Interval = ns3::MilliSeconds(50);
 
-    ScheduleUpdate(ns3::Seconds(0.));
+    ScheduleUpdate();
 }
 
 void
@@ -57,8 +61,10 @@ IndustrialPlant::DoUpdate()
     for (auto plc : m_Plcs)
         if (plc) plc->DoUpdate();
 
-    m_Step += m_Interval;
-    ScheduleUpdate(m_Step - ns3::Simulator::Now());
+    if (m_Processes.size() == 0 && m_Plcs.size() == 0)
+        return;
+
+    ScheduleUpdate();
 }
 
 void

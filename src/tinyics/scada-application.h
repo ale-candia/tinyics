@@ -64,7 +64,7 @@ private:
      *
      * \param dt time interval between packets.
      */
-    void ScheduleRead(ns3::Time dt);
+    void ScheduleRead();
 
     /**
      * Get index for the RTU in the Address vector. Crashes if not found

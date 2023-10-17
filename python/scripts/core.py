@@ -18,7 +18,7 @@ class Plc(_PlcBase):
     """
     Link the process and store a reference to it to control
     its lifetime. We also return self so that this can be
-    used as Plc("name").link_proces(process)
+    used as plc_var = Plc("name").link_proces(process)
     """
     def link_process(self, ip, priority = 0):
         self.__process = ip

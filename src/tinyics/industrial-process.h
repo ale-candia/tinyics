@@ -7,9 +7,6 @@
 
 /**
  * An Industrial Process to be controlled by a PLC
- *
- * This is called from the PLC to update the state of the process as
- * well as the state of the inputs and outputs of the PLC.
  */
 class IndustrialProcess
 {
@@ -18,8 +15,8 @@ public:
 
     void DoUpdate();
     
-    // Returns the updated measurements from the PLC
-    virtual void UpdateProcess(PlcState* plcIn, const PlcState* plcOut) = 0;
+    // updates the measurements from the PLC
+    virtual void UpdateProcess(PlcState* measurements, const PlcState* input) = 0;
 
     void LinkPLC(uint8_t priority, PlcState* measurement, const PlcState* input);
 
