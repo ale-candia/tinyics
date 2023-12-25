@@ -1,9 +1,9 @@
 #pragma once
 
+#include "ns3/socket.h"
+
 #include "modbus.h"
 #include "plc-state.h"
-
-#include "ns3/socket.h"
 
 using Socket = ns3::Ptr<ns3::Socket>;
 
@@ -11,25 +11,29 @@ class RequestProcessor
 {
 public:
     ~RequestProcessor() = default;
+
     /**
-     * Processes and sends the response using the provided socket
+     * Processes the incoming request and sends the response through the provided socket
      */
-    virtual void Execute(Socket sock, const ns3::Address& from, const ModbusADU& adu, PlcState& state) const = 0;
-};
+    static void Execute(MB_FunctionCode fc,
+                        Socket sock,
+                        const ns3::Address &from,
+                        const ModbusADU &adu,
+                        PlcState &state);
 
-class DigitalReadRequest : public RequestProcessor
-{
-public:
-    void Execute(Socket sock, const ns3::Address& from, const ModbusADU& adu, PlcState& state) const override;
-};
+private:
+    static void DigitalReadRequest(Socket sock,
+                                   const ns3::Address &from,
+                                   const ModbusADU &adu,
+                                   PlcState &state);
 
-class ReadRegistersRequest : public RequestProcessor
-{
-    void Execute(Socket sock, const ns3::Address& from, const ModbusADU& adu, PlcState& state) const override;
-};
+    static void ReadRegistersRequest(Socket sock,
+                                     const ns3::Address &from,
+                                     const ModbusADU &adu,
+                                     PlcState &state);
 
-class WriteCoilRequest : public RequestProcessor
-{
-    void Execute(Socket sock, const ns3::Address& from, const ModbusADU& adu, PlcState& state) const override;
+    static void WriteCoilRequest(Socket sock,
+                                 const ns3::Address &from,
+                                 const ModbusADU &adu,
+                                 PlcState &state);
 };
-

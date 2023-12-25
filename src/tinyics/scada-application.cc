@@ -3,21 +3,16 @@
 ns3::TypeId
 ScadaApplication::GetTypeId()
 {
-    static ns3::TypeId tid = ns3::TypeId("ScadaApplication")
-        .SetParent<Application>()
-        .SetGroupName("Applications");
+    static ns3::TypeId tid =
+        ns3::TypeId("ScadaApplication").SetParent<Application>().SetGroupName("Applications");
 
     return tid;
 }
 
-ScadaApplication::ScadaApplication(const char* name, double rate) : IndustrialApplication(name)
+ScadaApplication::ScadaApplication(const char *name, double rate)
+    : IndustrialApplication(name)
 {
     SetRefreshRate(rate);
-
-    m_ResponseProcessors.insert(std::pair(MB_FunctionCode::ReadCoils, std::make_shared<DigitalReadResponse>()));                                            
-    m_ResponseProcessors.insert(std::pair(MB_FunctionCode::ReadDiscreteInputs, m_ResponseProcessors.at(MB_FunctionCode::ReadCoils)));
-    m_ResponseProcessors.insert(std::pair(MB_FunctionCode::ReadInputRegisters, std::make_shared<RegisterReadResponse>()));
-    m_ResponseProcessors.insert(std::pair(MB_FunctionCode::WriteSingleCoil, std::make_shared<WriteCoilResponse>()));
 }
 
 void
@@ -57,7 +52,7 @@ void
 ScadaApplication::StartApplication()
 {
     // Setup communication with each remote terminal unit
-    for (const ns3::Address& address : m_PeerAddresses)
+    for (const ns3::Address &address : m_PeerAddresses)
     {
         // Create a socket
         auto tid = ns3::TypeId::LookupByName("ns3::TcpSocketFactory");
@@ -69,7 +64,8 @@ ScadaApplication::StartApplication()
             {
                 NS_FATAL_ERROR("Failed to bind socket");
             }
-            socket->Connect(ns3::InetSocketAddress(ns3::Ipv4Address::ConvertFrom(address), s_PeerPort));
+            socket->Connect(
+                ns3::InetSocketAddress(ns3::Ipv4Address::ConvertFrom(address), s_PeerPort));
         }
         else
         {
@@ -91,7 +87,6 @@ ScadaApplication::StopApplication()
     for (auto socket : m_Sockets)
     {
         socket->Close();
-        socket->SetRecvCallback(ns3::MakeNullCallback<void, ns3::Ptr<ns3::Socket>>());
         socket = nullptr;
     }
 }
@@ -111,13 +106,12 @@ ScadaApplication::SendAll()
     {
         auto socket = m_Sockets[i];
 
-        for (const auto& command : m_ReadCommands[i])
+        for (const auto &command : m_ReadCommands[i])
         {
-            command.second.Execute(socket, m_TransactionId, i+1);
+            command.second.Execute(socket, m_TransactionId, i + 1);
             m_TransactionId++;
             m_PendingPackets++;
         }
-
     }
 
     ScheduleRead();
@@ -137,10 +131,9 @@ ScadaApplication::HandleRead(ns3::Ptr<ns3::Socket> socket)
 
     while ((packet = socket->RecvFrom(from)))
     {
-
         if (ns3::InetSocketAddress::IsMatchingType(from))
         {
-            for(const ModbusADU& adu : ModbusADU::GetModbusADUs(packet))
+            for (const ModbusADU &adu : ModbusADU::GetModbusADUs(packet))
             {
                 if (adu.GetFunctionCode() != MB_FunctionCode::WriteSingleCoil)
                 {
@@ -152,10 +145,10 @@ ScadaApplication::HandleRead(ns3::Ptr<ns3::Socket> socket)
 
                 auto type = Var::IntoVarType(adu.GetFunctionCode());
 
-                std::vector<Var*> vars;
+                std::vector<Var *> vars;
 
                 // Update variables of the same function code and in the same RTU
-                for (auto& var : m_Vars)
+                for (auto &var : m_Vars)
                 {
                     if (type == var.second.GetType() && var.second.GetUID() == adu.GetUnitID())
                         vars.push_back(&var.second);
@@ -165,7 +158,7 @@ ScadaApplication::HandleRead(ns3::Ptr<ns3::Socket> socket)
                 if (adu.GetFunctionCode() != MB_FunctionCode::WriteSingleCoil)
                     start = m_ReadCommands[idx].at(adu.GetFunctionCode()).GetStart();
 
-                m_ResponseProcessors.at(adu.GetFunctionCode())->Execute(adu, vars, start);
+                ModbusResponseProcessor::Execute(adu.GetFunctionCode(), adu, vars, start);
             }
         }
     }
@@ -192,12 +185,11 @@ ScadaApplication::DoUpdate()
 }
 
 void
-ScadaApplication::AddVariable(
-    const ns3::Ptr<PlcApplication>& plc,
-    const std::string& name,
-    VarType type,
-    uint8_t pos
-){
+ScadaApplication::AddVariable(const ns3::Ptr<PlcApplication> &plc,
+                              const std::string &name,
+                              VarType type,
+                              uint8_t pos)
+{
     // Map VarType to the corresponding modbus function code
     MB_FunctionCode fc = Var::IntoFCRead(type);
 
@@ -210,11 +202,11 @@ ScadaApplication::AddVariable(
         return;
     }
 
-    m_Vars.insert(std::pair(name, Var(type, pos, idx+1)));
+    m_Vars.insert(std::pair(name, Var(type, pos, idx + 1)));
 
     /* Build a command to send the appropriate request */
 
-    auto& commandMap = m_ReadCommands[idx];
+    auto &commandMap = m_ReadCommands[idx];
 
     // If there isn't a command for the Function Code add it
     if (commandMap.find(fc) == commandMap.end())
@@ -226,7 +218,7 @@ ScadaApplication::AddVariable(
 }
 
 int
-ScadaApplication::GetRTUIndex(const ns3::Address& rtuAddr)
+ScadaApplication::GetRTUIndex(const ns3::Address &rtuAddr)
 {
     auto it = std::find(m_PeerAddresses.begin(), m_PeerAddresses.end(), rtuAddr);
     if (it == m_PeerAddresses.end())
@@ -239,25 +231,21 @@ void
 ScadaApplication::Write(const std::map<std::string, uint16_t> &vars)
 {
     // Create write commands if needed
-    for (auto& var : vars)
+    for (auto &var : vars)
     {
         if (m_Vars.find(var.first) != m_Vars.end())
         {
-            const Var& original = m_Vars.at(var.first);
+            const Var &original = m_Vars.at(var.first);
 
             // Only write to Coils and Holding Registers (Currently Not Implemented)
             // Only write if the value changed
             if (original.GetType() == VarType::Coil && original.GetValue() != var.second)
             {
-                m_WriteCommands.emplace_back(WriteCommand(
-                    MB_FunctionCode::WriteSingleCoil,
-                    original.GetPosition(),
-                    var.second,
-                    original.GetUID()
-                ));
+                m_WriteCommands.emplace_back(WriteCommand(MB_FunctionCode::WriteSingleCoil,
+                                                          original.GetPosition(),
+                                                          var.second,
+                                                          original.GetUID()));
             }
         }
-
     }
 }
-

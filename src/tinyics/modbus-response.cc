@@ -3,7 +3,32 @@
 #include <cmath>
 
 void
-DigitalReadResponse::Execute(const ModbusADU& adu, const std::vector<Var*>& vars, uint16_t start) const
+ModbusResponseProcessor::Execute(MB_FunctionCode fc,
+                                 const ModbusADU &adu,
+                                 const std::vector<Var *> &vars,
+                                 uint16_t start)
+{
+    switch (fc)
+    {
+    case MB_FunctionCode::ReadCoils:
+    case MB_FunctionCode::ReadDiscreteInputs:
+        DigitalReadResponse(adu, vars, start);
+        break;
+
+    case MB_FunctionCode::ReadInputRegisters:
+        RegisterReadResponse(adu, vars, start);
+        break;
+
+    case MB_FunctionCode::WriteSingleCoil:
+        WriteCoilResponse(adu, vars, start);
+        break;
+    }
+}
+
+void
+ModbusResponseProcessor::DigitalReadResponse(const ModbusADU &adu,
+                                             const std::vector<Var *> &vars,
+                                             uint16_t start)
 {
     // Amount of data bytes (including the byte count)
     uint16_t buff_size = adu.GetLengthField() - 2;
@@ -32,7 +57,9 @@ DigitalReadResponse::Execute(const ModbusADU& adu, const std::vector<Var*>& vars
 }
 
 void
-RegisterReadResponse::Execute(const ModbusADU& adu, const std::vector<Var*>& vars, uint16_t start) const
+ModbusResponseProcessor::RegisterReadResponse(const ModbusADU &adu,
+                                              const std::vector<Var *> &vars,
+                                              uint16_t start)
 {
     // Amount of data bytes (including the byte count)
     uint16_t buff_size = adu.GetLengthField() - 2;
@@ -47,7 +74,8 @@ RegisterReadResponse::Execute(const ModbusADU& adu, const std::vector<Var*>& var
         // Indicates the place of the height byte for the variable
         uint8_t pos = var->GetPosition() - start;
 
-        if (pos > byte_count / 2) return;
+        if (pos > byte_count / 2)
+            return;
 
         // We should add 1 here, to taking into consideration the byte_count
         uint8_t high = adu.GetDataByte(2 * pos + 1);
@@ -60,7 +88,9 @@ RegisterReadResponse::Execute(const ModbusADU& adu, const std::vector<Var*>& var
 }
 
 void
-WriteCoilResponse::Execute(const ModbusADU& adu, const std::vector<Var*>& vars, uint16_t start) const
+ModbusResponseProcessor::WriteCoilResponse(const ModbusADU &adu,
+                                           const std::vector<Var *> &vars,
+                                           uint16_t start)
 {
     // Only Data bytes (without uid and function code)
     uint16_t buff_size = adu.GetLengthField() - 2;
@@ -72,7 +102,9 @@ WriteCoilResponse::Execute(const ModbusADU& adu, const std::vector<Var*>& vars, 
     // Address/Position of the modified value in the RTU
     uint16_t pos = CombineUint8(adu.GetDataByte(1), adu.GetDataByte(0));
 
-    auto var = std::find_if(vars.begin(), vars.end(), [pos](const Var* v) {return v->GetPosition() == pos; });
+    auto var = std::find_if(vars.begin(), vars.end(), [pos](const Var *v) {
+        return v->GetPosition() == pos;
+    });
 
     if (var != vars.end())
     {
