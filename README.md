@@ -1,3 +1,7 @@
+# TinyICS
+
+Library for simulating ICS Networks built on top of NS-3.
+
 ## Building
 
 To set up and compile the project, follow these steps:
