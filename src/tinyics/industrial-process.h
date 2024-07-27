@@ -1,3 +1,7 @@
+/**
+ * TODO: Add safety to raw pointers
+ */
+
 #pragma once
 
 #include "plc-state.h"
@@ -14,7 +18,7 @@ public:
     virtual ~IndustrialProcess() = default;
 
     void DoUpdate();
-    
+
     // updates the measurements from the PLC
     virtual void UpdateProcess(PlcState* measurements, const PlcState* input) = 0;
 
@@ -27,4 +31,3 @@ private:
     const PlcState* m_Input;
     uint8_t m_Priority = 0;
 };
-

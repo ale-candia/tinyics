@@ -13,7 +13,7 @@ namespace py = pybind11;
 class IndustrialProcessTrampoline : public IndustrialProcess
 {
 public:
-    /// Updates the state of the Process 
+    /// Updates the state of the Process
     void UpdateProcess(PlcState *state, const PlcState *input) override
     {
         PYBIND11_OVERLOAD_PURE(
@@ -90,8 +90,6 @@ PYBIND11_MODULE(industrial_networks, m)
 {
     py::doc("Library for simulating industrial control systems networks");
 
-    py::class_<IndustrialApplication, ns3::Ptr<IndustrialApplication>>(m, "IndustrialApplication");
-
     py::class_<PlcApplication, IndustrialApplication, PlcTrampoline, ns3::Ptr<PlcApplication>>(m, "_PlcBase")
         .def(py::init<const char*>())
         .def(
@@ -134,7 +132,7 @@ PYBIND11_MODULE(industrial_networks, m)
     py::class_<IndustrialProcess, IndustrialProcessTrampoline, std::shared_ptr<IndustrialProcess>>(m, "IndustrialProcess")
         .def(py::init<>())
         .def("update_process", &IndustrialProcess::UpdateProcess);
-    
+
     py::class_<PlcState>(m, "PlcState")
         .def(py::init<>())
         .def("get_digital_state", &PlcState::GetDigitalState)
@@ -167,6 +165,6 @@ PYBIND11_MODULE(industrial_networks, m)
 
     m.def("get_current_time", &GetCurrentTime);
 
+    // TODO: Can this be done internally when calling get_analog_state() ?
     m.def("scale_word_to_range", &DenormalizeU16InRange);
 }
-

@@ -84,6 +84,7 @@ RequestProcessor::ReadRegistersRequest(Socket sock,
         ModbusADU::CopyBase(adu, response);
         response.SetData(data);
 
+        // TODO: Maybe this should return the ModbusADU
         ns3::Ptr<ns3::Packet> p = response.ToPacket();
         sock->SendTo(p, 0, from);
     }

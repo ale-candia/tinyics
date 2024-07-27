@@ -15,6 +15,7 @@ IndustrialPlant::ScheduleUpdate()
 void
 IndustrialPlant::SetRefreshRate(uint64_t rate)
 {
+    // TODO: init plant already schedules the first event with the default interval
     InitPlant();
     s_Instance->m_Interval = ns3::MilliSeconds(rate);
 }
@@ -40,6 +41,7 @@ IndustrialPlant::InitPlant()
         return;
 
     s_Instance = new IndustrialPlant();
+    // TODO: if there's already an interval this shouldn't be executed.
     s_Instance->m_Interval = ns3::MilliSeconds(50);
 
     ScheduleUpdate();
@@ -89,4 +91,3 @@ IndustrialPlant::Sort()
 
     m_Sorted = true;
 }
-

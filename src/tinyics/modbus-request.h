@@ -12,6 +12,7 @@ class RequestProcessor
 public:
     ~RequestProcessor() = default;
 
+    // TODO: The function code is already known from the modbus ADU
     /**
      * Processes the incoming request and sends the response through the provided socket
      */
