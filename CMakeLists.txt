@@ -7,14 +7,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #### Debug and Release Versions ####
 
 if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build, options are: Debug Release" FORCE)
+  set(CMAKE_BUILD_TYPE "release" CACHE STRING "Choose the type of build, options are: debug and release" FORCE)
 endif()
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+if(CMAKE_BUILD_TYPE STREQUAL "debug")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
 endif()
 
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
+if(CMAKE_BUILD_TYPE STREQUAL "release")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 endif()
 
