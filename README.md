@@ -40,4 +40,4 @@ my_project/
 
 ## Getting started
 
-To get started, check out the [tutorial](docs/tutorial.md) for an example of how to use the simulator.
+For some examples on how to use the simulator, check out on of the [examples](examples).
