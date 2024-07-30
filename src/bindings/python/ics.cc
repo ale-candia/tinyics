@@ -90,6 +90,8 @@ PYBIND11_MODULE(industrial_networks, m)
 {
     py::doc("Library for simulating industrial control systems networks");
 
+    py::class_<IndustrialApplication, ns3::Ptr<IndustrialApplication>>(m, "IndustrialApplication");
+
     py::class_<PlcApplication, IndustrialApplication, PlcTrampoline, ns3::Ptr<PlcApplication>>(m, "_PlcBase")
         .def(py::init<const char*>())
         .def(
