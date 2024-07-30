@@ -22,9 +22,9 @@ private:
     /*
      * Creates Industrial Plant and schedules it for updates
      */
-    static void InitPlant();
+    static inline void InitPlant();
 
-    static inline void ScheduleUpdate(ns3::Time dt);
+    static inline void ScheduleUpdate();
 
     void DoUpdate();
 

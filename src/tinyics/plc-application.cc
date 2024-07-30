@@ -1,10 +1,10 @@
-#include "industrial-plant.h"
-#include "modbus.h"
-#include "utils.h"
-
 #include "ns3/inet-socket-address.h"
 #include "ns3/packet.h"
 #include "ns3/simulator.h"
+
+#include "industrial-plant.h"
+#include "modbus.h"
+#include "utils.h"
 
 ns3::TypeId
 PlcApplication::GetTypeId()
@@ -16,27 +16,10 @@ PlcApplication::GetTypeId()
     return tid;
 }
 
-PlcApplication::PlcApplication(const char* name) : IndustrialApplication(name)
+PlcApplication::PlcApplication(const char *name)
+    : IndustrialApplication(name)
 {
     IndustrialPlant::RegisterPLC(this);
-
-    // Setup Modbus Responses (Can also be created dynamically/on demand if needed)
-    m_RequestProcessors.insert(std::pair(
-        MB_FunctionCode::ReadCoils,
-        std::make_shared<DigitalReadRequest>(DigitalReadRequest())
-    ));
-    m_RequestProcessors.insert(std::pair(
-        MB_FunctionCode::ReadDiscreteInputs,
-        m_RequestProcessors.at(MB_FunctionCode::ReadCoils)
-    ));
-    m_RequestProcessors.insert(std::pair(
-        MB_FunctionCode::ReadInputRegisters,
-        std::make_shared<ReadRegistersRequest>(ReadRegistersRequest())
-    ));
-    m_RequestProcessors.insert(std::pair(
-        MB_FunctionCode::WriteSingleCoil,
-        std::make_shared<WriteCoilRequest>(WriteCoilRequest())
-    ));
 }
 
 PlcApplication::~PlcApplication()
@@ -70,10 +53,8 @@ PlcApplication::StartApplication()
 
     m_Socket->Listen();
     m_Socket->SetAcceptCallback(
-        ns3::MakeNullCallback<bool, ns3::Ptr<ns3::Socket>,
-        const ns3::Address&>(),
-        MakeCallback(&PlcApplication::HandleAccept, this)
-    );
+        ns3::MakeNullCallback<bool, ns3::Ptr<ns3::Socket>, const ns3::Address &>(),
+        MakeCallback(&PlcApplication::HandleAccept, this));
 }
 
 void
@@ -87,7 +68,7 @@ PlcApplication::StopApplication()
 }
 
 void
-PlcApplication::HandleAccept(ns3::Ptr<ns3::Socket> s, const ns3::Address& from)
+PlcApplication::HandleAccept(ns3::Ptr<ns3::Socket> s, const ns3::Address &from)
 {
     s->SetRecvCallback(MakeCallback(&PlcApplication::HandleRead, this));
 }
@@ -101,17 +82,14 @@ PlcApplication::HandleRead(ns3::Ptr<ns3::Socket> socket)
     {
         if (ns3::InetSocketAddress::IsMatchingType(from))
         {
-            for (const ModbusADU& adu : ModbusADU::GetModbusADUs(packet))
+            for (const ModbusADU &adu : ModbusADU::GetModbusADUs(packet))
             {
                 MB_FunctionCode fc = adu.GetFunctionCode();
 
                 if (fc == MB_FunctionCode::ReadCoils || fc == MB_FunctionCode::WriteSingleCoil)
-                {
-                    if (m_RequestProcessors.at(fc))
-                        m_RequestProcessors.at(fc)->Execute(socket, from, adu, m_Out);
-                }
+                    RequestProcessor::Execute(fc, socket, from, adu, m_Out);
                 else
-                    m_RequestProcessors.at(fc)->Execute(socket, from, adu, m_In);
+                    RequestProcessor::Execute(fc, socket, from, adu, m_In);
             }
         }
     }
@@ -129,4 +107,3 @@ PlcApplication::DoUpdate()
 {
     Update(&m_In, &m_Out);
 }
-

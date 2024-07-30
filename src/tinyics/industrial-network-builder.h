@@ -9,8 +9,8 @@
 
 // These are all values typically found in Ethernet/IP networks
 
-// 1Gb/s
-#define ETH_DATA_RATE ns3::DataRateValue(ns3::DataRate(8000000))
+// 10 Mbps
+#define ETH_DATA_RATE ns3::DataRateValue(ns3::DataRate(10000000))
 
 #define ETH_DELAY ns3::TimeValue(ns3::MicroSeconds(87))
 

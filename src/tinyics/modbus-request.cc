@@ -1,11 +1,34 @@
 #include "modbus-request.h"
 
 void
-DigitalReadRequest::Execute(
-    Socket sock,
-    const ns3::Address& from,
-    const ModbusADU& adu,
-    PlcState& state) const
+RequestProcessor::Execute(MB_FunctionCode fc,
+                          Socket sock,
+                          const ns3::Address &from,
+                          const ModbusADU &adu,
+                          PlcState &state)
+{
+    switch (fc)
+    {
+    case MB_FunctionCode::ReadCoils:
+    case MB_FunctionCode::ReadDiscreteInputs:
+        DigitalReadRequest(sock, from, adu, state);
+        break;
+
+    case MB_FunctionCode::ReadInputRegisters:
+        ReadRegistersRequest(sock, from, adu, state);
+        break;
+
+    case MB_FunctionCode::WriteSingleCoil:
+        WriteCoilRequest(sock, from, adu, state);
+        break;
+    }
+}
+
+void
+RequestProcessor::DigitalReadRequest(Socket sock,
+                                     const ns3::Address &from,
+                                     const ModbusADU &adu,
+                                     PlcState &state)
 {
     uint16_t start = CombineUint8(adu.GetDataByte(0), adu.GetDataByte(1));
     uint16_t num = CombineUint8(adu.GetDataByte(2), adu.GetDataByte(3));
@@ -28,11 +51,10 @@ DigitalReadRequest::Execute(
 }
 
 void
-ReadRegistersRequest::Execute(
-    Socket sock,
-    const ns3::Address& from,
-    const ModbusADU& adu,
-    PlcState& state) const
+RequestProcessor::ReadRegistersRequest(Socket sock,
+                                       const ns3::Address &from,
+                                       const ModbusADU &adu,
+                                       PlcState &state)
 {
     uint16_t start = CombineUint8(adu.GetDataByte(0), adu.GetDataByte(1));
     uint16_t num = CombineUint8(adu.GetDataByte(2), adu.GetDataByte(3));
@@ -45,7 +67,7 @@ ReadRegistersRequest::Execute(
         uint16_t end = num + start - 1;
 
         std::vector<uint8_t> data(1 + 2 * num); // Registers are 16 bits
-        data[0] = 2 * num; // Set byte count
+        data[0] = 2 * num;                      // Set byte count
 
         uint8_t count = 1;
         for (int i = start; i <= end; i++)
@@ -55,24 +77,24 @@ ReadRegistersRequest::Execute(
             data[count] = static_cast<uint8_t>(higher);
             data[count + 1] = static_cast<uint8_t>(lower);
 
-            count+=2;
+            count += 2;
         }
 
         ModbusADU response;
         ModbusADU::CopyBase(adu, response);
         response.SetData(data);
 
+        // TODO: Maybe this should return the ModbusADU
         ns3::Ptr<ns3::Packet> p = response.ToPacket();
         sock->SendTo(p, 0, from);
     }
 }
 
 void
-WriteCoilRequest::Execute(
-    Socket sock,
-    const ns3::Address& from,
-    const ModbusADU& adu,
-    PlcState& state) const
+RequestProcessor::WriteCoilRequest(Socket sock,
+                                   const ns3::Address &from,
+                                   const ModbusADU &adu,
+                                   PlcState &state)
 {
     uint16_t pos = CombineUint8(adu.GetDataByte(0), adu.GetDataByte(1));
     uint16_t value = CombineUint8(adu.GetDataByte(2), adu.GetDataByte(3));
@@ -82,4 +104,3 @@ WriteCoilRequest::Execute(
     ns3::Ptr<ns3::Packet> p = adu.ToPacket();
     sock->SendTo(p, 0, from);
 }
-

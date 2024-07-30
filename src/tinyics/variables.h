@@ -13,6 +13,7 @@ enum VarType
     InputRegister,
 };
 
+// TODO: Add operator overloading.
 class Var
 {
 public:

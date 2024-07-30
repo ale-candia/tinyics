@@ -1,36 +1,34 @@
 #pragma once
 
+#include <map>
+
 #include "modbus.h"
 #include "utils.h"
 #include "variables.h"
 
-#include <map>
-
-class ResponseProcessor
+class ModbusResponseProcessor
 {
-  public:
-    ~ResponseProcessor() = default;
+public:
+    ~ModbusResponseProcessor() = default;
 
     /**
-     * Processes and sends the response using the provided socket
+     * Processes the incoming response and sends the response using the provided socket.
      */
-    virtual void Execute(const ModbusADU& adu, const std::vector<Var*>& vars, uint16_t start) const = 0;
-};
+    static void Execute(MB_FunctionCode fc,
+                        const ModbusADU &adu,
+                        const std::vector<Var *> &vars,
+                        uint16_t start);
 
-class DigitalReadResponse : public ResponseProcessor
-{
-  public:
-    void Execute(const ModbusADU& adu, const std::vector<Var*>& vars, uint16_t start) const override;
-};
+private:
+    static void DigitalReadResponse(const ModbusADU &adu,
+                                    const std::vector<Var *> &vars,
+                                    uint16_t start);
 
-class RegisterReadResponse : public ResponseProcessor
-{
-  public:
-    void Execute(const ModbusADU& adu, const std::vector<Var*>& vars, uint16_t start) const override;
-};
+    static void RegisterReadResponse(const ModbusADU &adu,
+                                     const std::vector<Var *> &vars,
+                                     uint16_t start);
 
-class WriteCoilResponse : public ResponseProcessor
-{
-  public:
-    void Execute(const ModbusADU& adu, const std::vector<Var*>& vars, uint16_t start) const override;
+    static void WriteCoilResponse(const ModbusADU &adu,
+                                  const std::vector<Var *> &vars,
+                                  uint16_t start);
 };

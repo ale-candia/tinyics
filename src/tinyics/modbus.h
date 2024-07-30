@@ -10,6 +10,14 @@
 // Size of a Modbus ADU without data field
 #define MB_BASE_SZ 8
 
+// Position in the ADU byte buffer
+#define TRANSACTION_ID_POS 0
+#define PROTOCOL_ID_POS    2
+#define LENGTH_FIELD_POS   4
+#define UNIT_ID_POS        6
+#define FUNCTION_CODE_POS  7
+#define DATA_POS           8
+
 enum MB_FunctionCode
 {
     ReadCoils = 1,
@@ -76,24 +84,17 @@ public:
 private:
     ModbusADU(const uint8_t* buff, uint16_t start, uint16_t finish);
 
-    /// Position in the ADU byte buffer
-    enum FieldStartPosition
-    {
-        TRANSACTION_ID_POS = 0,
-        PROTOCOL_ID_POS    = 2,
-        LENGTH_FIELD_POS   = 4,
-        UNIT_ID_POS        = 6,
-        FUNCTION_CODE_POS  = 7,
-        DATA_POS           = 8,
-    };
     void SetLengthField(uint16_t length);
 
     void SetInitialValues();
     
+    // TODO: Is this the best way of storing the data?
     uint8_t *m_Bytes;   //< data in the ADU
     uint8_t m_Size;     //< size of the ADU byte buffer
 };
 
+// TODO: Is template the best way to do this? Maybe two definitions with
+// different signatures is better since there's only two expected cases.
 template<typename T>
 void
 ModbusADU::SetData(const std::vector<T>& data)

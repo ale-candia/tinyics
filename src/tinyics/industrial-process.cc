@@ -6,7 +6,14 @@
 void
 IndustrialProcess::DoUpdate()
 {
-    UpdateProcess(m_Measurements, m_Input);
+    if (m_Measurements != nullptr && m_Input != nullptr)
+    {
+        UpdateProcess(m_Measurements, m_Input);
+    }
+    else
+    {
+        // throw fatal error
+    }
 }
 
 void
