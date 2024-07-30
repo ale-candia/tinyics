@@ -2,7 +2,7 @@
 
 This example simulates a bottle-filling process. It consists of a water tank controlled by a PLC and a bottle-filling process controlled by a second PLC that uses the water in the tank to fill bottles on a conveyor belt, as shown in the image below.
 
-![Simulation scenario](simulation_scenario.png)
+![Simulation scenario](bottle_filler_scenario.png)
 
 Besides this, there is a central Master Station Unit (MSU) that controls when the Water Tank process starts. The MSU issues a start command via Modbus/TCP.
 
