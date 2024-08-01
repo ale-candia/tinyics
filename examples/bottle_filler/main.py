@@ -1,6 +1,6 @@
 import tinyics
-from bottle_filler import PlcBottle 
-from water_tank import PlcWaterTank 
+from bottle_filler import PlcBottle
+from water_tank import PlcWaterTank
 
 # variables for the plot
 tank_height = []    # level of water in the tank
@@ -48,8 +48,6 @@ class MyScada(tinyics.Scada):
 # Define the control system components
 plc_wt = PlcWaterTank("wt")
 plc_bf = PlcBottle("bf")
-#scada = MyScada("scada") # set a refresh rate of 500ms <=> 0.5 s
-#scada = MyScada("scada", 1000) # set a refresh rate of 500ms <=> 0.5 s
 scada = MyScada("scada", 100) # set a refresh rate of 500ms <=> 0.5 s
 
 # Construct the industrial network
