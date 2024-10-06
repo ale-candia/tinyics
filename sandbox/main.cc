@@ -189,6 +189,7 @@ main(int argc, char* argv[])
     networkBuilder.EnablePcap("sim");
 
     // Run the simulation
+    ns3::Simulator::Stop(ns3::Seconds(100));
     ns3::Simulator::Run();
     ns3::Simulator::Destroy();
 }
